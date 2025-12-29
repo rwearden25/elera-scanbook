@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// Barcode component using canvas
+// Barcode component using canvas (1D linear barcode)
 const Barcode = ({ value, height = 60 }) => {
   const canvasRef = useRef(null);
   
@@ -47,6 +47,149 @@ const Barcode = ({ value, height = 60 }) => {
   }, [value, height]);
   
   return <canvas ref={canvasRef} style={{ maxWidth: '100%' }} />;
+};
+
+// GS1 DataMatrix 2D barcode component using bwip-js
+const DataMatrixBarcode = ({ value, gs1Data, size = 150 }) => {
+  const canvasRef = useRef(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    // Load bwip-js from CDN if not already loaded
+    if (!window.bwipjs) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/bwip-js/4.1.2/bwip-js.min.js';
+      script.onload = () => setLoaded(true);
+      script.onerror = () => setError(true);
+      document.head.appendChild(script);
+    } else {
+      setLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!loaded || !canvasRef.current || !window.bwipjs) return;
+    
+    try {
+      // Format GS1 data - bwip-js expects the data without parentheses for encoding
+      // but with FNC1 separators. The parentheses format works with parse option.
+      const barcodeData = gs1Data || `(01)${value}`;
+      
+      window.bwipjs.toCanvas(canvasRef.current, {
+        bcid: 'datamatrix',
+        text: barcodeData,
+        scale: 4,
+        padding: 5,
+        parsefnc: true,
+      });
+      setError(false);
+    } catch (e) {
+      console.error('Barcode generation error:', e);
+      // Try simpler datamatrix without GS1 formatting
+      try {
+        const simpleData = value.replace(/[^0-9]/g, '');
+        window.bwipjs.toCanvas(canvasRef.current, {
+          bcid: 'datamatrix',
+          text: simpleData,
+          scale: 4,
+          padding: 5,
+        });
+        setError(false);
+      } catch (e2) {
+        console.error('Fallback barcode error:', e2);
+        setError(true);
+      }
+    }
+  }, [loaded, value, gs1Data, size]);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-4 bg-purple-50 rounded-lg border-2 border-dashed border-purple-300" style={{ width: 140, minHeight: 140 }}>
+        <span className="text-3xl mb-2">📊</span>
+        <span className="text-xs font-semibold text-purple-700 text-center">GS1 2D DataMatrix</span>
+        <span className="text-xs font-mono text-purple-600 mt-1 text-center break-all px-2">{value}</span>
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return (
+      <div className="flex items-center justify-center bg-slate-100 rounded-lg animate-pulse" style={{ width: 140, height: 140 }}>
+        <span className="text-slate-400 text-sm">Loading...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center">
+      <canvas ref={canvasRef} style={{ maxWidth: '100%' }} />
+    </div>
+  );
+};
+
+// Code 128 barcode component for alphanumeric codes (like Rx prescriptions)
+const Code128Barcode = ({ value, height = 60 }) => {
+  const canvasRef = useRef(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!window.bwipjs) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/bwip-js/4.1.2/bwip-js.min.js';
+      script.onload = () => setLoaded(true);
+      script.onerror = () => setError(true);
+      document.head.appendChild(script);
+    } else {
+      setLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!loaded || !canvasRef.current || !window.bwipjs) return;
+    
+    try {
+      window.bwipjs.toCanvas(canvasRef.current, {
+        bcid: 'code128',
+        text: value,
+        scale: 2,
+        height: 12,
+        includetext: true,
+        textxalign: 'center',
+        textsize: 10,
+        padding: 5,
+      });
+      setError(false);
+    } catch (e) {
+      console.error('Code128 barcode error:', e);
+      setError(true);
+    }
+  }, [loaded, value, height]);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-4 bg-indigo-50 rounded-lg border-2 border-dashed border-indigo-300" style={{ minWidth: 150 }}>
+        <span className="text-2xl mb-1">📋</span>
+        <span className="text-xs font-semibold text-indigo-700">Code 128</span>
+        <span className="text-xs font-mono text-indigo-600 mt-1">{value}</span>
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return (
+      <div className="flex items-center justify-center bg-slate-100 rounded-lg animate-pulse" style={{ width: 150, height: 80 }}>
+        <span className="text-slate-400 text-sm">Loading...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center">
+      <canvas ref={canvasRef} style={{ maxWidth: '100%' }} />
+    </div>
+  );
 };
 
 // Grocery Scanbook Data
@@ -137,6 +280,53 @@ const pharmacyData = {
     { id: 3, categoryId: "beauty", name: "Oral Care Bundle", type: "BUNDLE_PRICE", promotion: "Toothpaste + Toothbrush Bundle $6.99", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "Bundle Price $6.99 for toothpaste + toothbrush", steps: "Scan Colgate Optic White Toothpaste and GUM Toothbrush. Verify bundle price of $6.99 applies.", notes: null, items: [{ name: "Colgate Optic White Toothpaste", sku: "3500045836", barcode: "03500045836" }, { name: "GUM Toothbrush", sku: "7094212310", barcode: "07094212310" }] },
     { id: 4, categoryId: "beauty", name: "Skincare Sheet Mask Special", type: "FREE_ITEM", promotion: "Buy 2 Masks Get 1 Free", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "Buy 2 Sheet Masks, Get 3rd FREE", steps: "Scan 3x Sheet Masks (any combination). Verify lowest priced mask is FREE.", notes: "Mix and match any sheet masks", items: [{ name: "Glowing Vitamin C Sheet Mask", sku: "10266", barcode: "10266" }, { name: "Rejuv Niacinamide Sheet Mask", sku: "10271", barcode: "10271" }] },
     { id: 5, categoryId: "beauty", name: "Personal Care Multi-Buy", type: "PERCENT_OFF", promotion: "Buy 3 Personal Care Items Save 20%", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "20% OFF when buying 3+ items", steps: "Scan 3 or more personal care items. Verify 20% discount applies to all qualifying items.", notes: "Mix and match qualifying items", items: [{ name: "Dove Mens Bar", sku: "1111101845", barcode: "01111101845" }, { name: "Dove Mens Shampoo/Conditioner", sku: "7940061203", barcode: "07940061203" }, { name: "Speed Stick", sku: "2220000490", barcode: "02220000490" }, { name: "Triple Blade Razors", sku: "88867009863", barcode: "88867009863" }] }
+  ]
+};
+
+// GS1-2D DataMatrix Barcodes Data
+const gs1DataItems = {
+  title: "GS1-2D DataMatrix Barcodes",
+  subtitle: "Barcodes with embedded GS1 Application Identifiers for compliance validation",
+  categories: [
+    {
+      id: "compliance",
+      name: "Compliance Validation",
+      icon: "✅",
+      description: "Items with AI 01 (GTIN) and AI 16 (Sell-By Date) for demonstrating compliance validation.",
+      items: [
+        { name: "Milk - EXPIRED", sku: "00049000000443", gtin: "00049000000443", gs1String: "0100049000000443162512", gs1Display: "(01)00049000000443(16)251215", barcodeType: "GS1 2D", note: "AI 16: Sell-by 2025-12-15 (PAST) - Will trigger compliance block", status: "expired" },
+        { name: "Milk - FRESH", sku: "00049000000443", gtin: "00049000000443", gs1String: "0100049000000443162603", gs1Display: "(01)00049000000443(16)260315", barcodeType: "GS1 2D", note: "AI 16: Sell-by 2026-03-15 (VALID) - Will pass compliance check", status: "valid" },
+        { name: "Beer", sku: "00018017220018", gtin: "00018017220018", gs1String: "0100018017220018", gs1Display: "(01)00018017220018", barcodeType: "GS1 2D", note: "Age verification required (21+) - Will prompt for ID check", status: "age-verify" }
+      ]
+    },
+    {
+      id: "allergy",
+      name: "Allergy Products",
+      icon: "💊",
+      description: "$5 OFF promotion when 2+ allergy products are purchased together.",
+      items: [
+        { name: "Zyrtec Allergy Relief", sku: "31191716320", gtin: "03119171632008", gs1String: "0103119171632008", gs1Display: "(01)03119171632008", barcodeType: "GS1 2D", note: "Allergy promotion item" },
+        { name: "Sudafed Decongestant", sku: "90003000000", gtin: "09000300000004", gs1String: "0109000300000004", gs1Display: "(01)09000300000004", barcodeType: "GS1 2D", note: "Allergy promotion item" }
+      ]
+    },
+    {
+      id: "loyalty",
+      name: "Loyalty Discount Items",
+      icon: "🎁",
+      description: "Items for demonstrating loyalty card discount application at front-end checkout.",
+      items: [
+        { name: "Winter Gloves", sku: "88888000001", gtin: "08888800000109", gs1String: "0108888800000109", gs1Display: "(01)08888800000109", barcodeType: "GS1 2D", note: "Loyalty discount item" }
+      ]
+    },
+    {
+      id: "pharmacy",
+      name: "Pharmacy / Rx",
+      icon: "💉",
+      description: "Sample prescription barcode for pharmacy pickup demonstration.",
+      items: [
+        { name: "Prescription (Rx)", sku: "RX123456789", barcode: "RX123456789", barcodeType: "Code 128", note: "McKesson integration demo - verify format with ELERA pharmacy team" }
+      ]
+    }
   ]
 };
 
@@ -957,11 +1147,12 @@ const Dashboard = ({ user, onSelectCategory, onLogout }) => {
           <h2 className="text-3xl font-bold text-slate-800 mb-2">Select Retail Vertical</h2>
           <p className="text-slate-600">Choose a category to access POS test scenarios and scannable barcodes</p>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <CategoryCard title="Grocery and General Merchandise" icon="🛒" description="Full-service grocery POS testing with produce, promotions, and loyalty programs." itemCount={8} onClick={() => onSelectCategory('grocery')} available={true} />
           <CategoryCard title="Convenience and Fuel" icon="⛽" description="C-store and fuel station POS scenarios including bundles, clearance, and loyalty segments." itemCount={8} onClick={() => onSelectCategory('convenience')} available={true} />
           <CategoryCard title="Items" icon="📦" description="Browse the complete item catalog with SKUs, barcodes, and department groupings." itemCount={totalItems} onClick={() => onSelectCategory('items')} available={true} />
           <CategoryCard title="Pharmacy" icon="💊" description="Pharmacy and beauty items with OTC medications, skincare, and personal care products." itemCount={pharmacyItems} onClick={() => onSelectCategory('pharmacy')} available={true} />
+          <CategoryCard title="GS1-2D Barcodes" icon="📊" description="GS1 2D DataMatrix barcodes with embedded Application Identifiers for compliance validation." itemCount={7} onClick={() => onSelectCategory('gs1')} available={true} />
         </div>
       </main>
     </div>
@@ -1353,6 +1544,116 @@ const PharmacyView = ({ onBack }) => {
   );
 };
 
+// GS1-2D View Component
+const GS1View = ({ onBack }) => {
+  const [selectedCategory, setSelectedCategory] = useState(gs1DataItems.categories[0]?.id || '');
+  const currentCategory = gs1DataItems.categories.find(c => c.id === selectedCategory);
+  const totalItems = gs1DataItems.categories.reduce((sum, c) => sum + c.items.length, 0);
+
+  const getStatusBadge = (status) => {
+    switch(status) {
+      case 'expired': return 'bg-red-100 text-red-800 border-red-200';
+      case 'valid': return 'bg-green-100 text-green-800 border-green-200';
+      case 'age-verify': return 'bg-amber-100 text-amber-800 border-amber-200';
+      default: return 'bg-slate-100 text-slate-800 border-slate-200';
+    }
+  };
+
+  const getBarcodeTypeBadge = (type) => {
+    switch(type) {
+      case 'GS1 2D': return 'bg-purple-100 text-purple-800';
+      case 'EAN-13': return 'bg-blue-100 text-blue-800';
+      case 'Code 128': return 'bg-indigo-100 text-indigo-800';
+      default: return 'bg-slate-100 text-slate-800';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100">
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={onBack} className="text-slate-600 hover:text-slate-800 cursor-pointer">← Back</button>
+            <div className="h-6 w-px bg-slate-300"></div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-800">{gs1DataItems.title}</h1>
+              <p className="text-xs text-slate-500">{totalItems} items • {gs1DataItems.subtitle}</p>
+            </div>
+          </div>
+        </div>
+      </header>
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex gap-6">
+          <div className="w-72 flex-shrink-0">
+            <h3 className="font-semibold text-slate-700 mb-3">Categories</h3>
+            <div className="space-y-2">
+              {gs1DataItems.categories.map(category => (
+                <div key={category.id} onClick={() => setSelectedCategory(category.id)} className={`p-4 rounded-lg cursor-pointer transition ${selectedCategory === category.id ? 'bg-purple-50 border-2 border-purple-500' : 'bg-white border border-slate-200 hover:border-purple-300'}`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{category.icon}</span>
+                    <div>
+                      <div className="font-semibold text-slate-800 text-sm">{category.name}</div>
+                      <div className="text-xs text-slate-500">{category.items.length} items</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex-1">
+            {currentCategory && (
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-3xl">{currentCategory.icon}</span>
+                  </div>
+                  <h2 className="text-2xl font-bold">{currentCategory.name}</h2>
+                  <p className="mt-2 text-purple-100 text-sm">{currentCategory.description}</p>
+                </div>
+                <div className="p-6">
+                  <div className="grid gap-4">
+                    {currentCategory.items.map((item, i) => (
+                      <div key={i} className={`border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4 ${item.status ? getStatusBadge(item.status) : 'border-slate-200'}`}>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <h4 className="font-semibold text-slate-800">{item.name}</h4>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${getBarcodeTypeBadge(item.barcodeType)}`}>{item.barcodeType}</span>
+                          </div>
+                          <div className="flex gap-4 mt-1 text-sm flex-wrap">
+                            <span className="text-slate-500">SKU: <span className="font-mono text-slate-700">{item.sku}</span></span>
+                            {item.gtin && <span className="text-slate-500">GTIN: <span className="font-mono text-slate-700">{item.gtin}</span></span>}
+                          </div>
+                          {item.gs1Display && (
+                            <div className="mt-1 text-sm">
+                              <span className="text-slate-500">GS1: <span className="font-mono text-purple-700">{item.gs1Display}</span></span>
+                            </div>
+                          )}
+                          {item.note && (
+                            <p className="mt-2 text-sm text-slate-600 italic">{item.note}</p>
+                          )}
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-lg p-3">
+                          {item.barcodeType === 'GS1 2D' ? (
+                            <DataMatrixBarcode value={item.gtin || item.sku} gs1Data={item.gs1String} size={120} />
+                          ) : item.barcodeType === 'Code 128' ? (
+                            <Code128Barcode value={item.barcode || item.sku} height={60} />
+                          ) : (
+                            <Barcode value={item.barcode || item.sku} height={50} />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
 // Main App Component
 export default function App() {
   const [user, setUser] = useState(() => localStorage.getItem('elera_user'));
@@ -1434,6 +1735,7 @@ export default function App() {
 
   if (currentView === 'scanbook' && selectedCategory === 'items') return <ItemsView onBack={handleBack} initialSearch={initialSearch} />;
   if (currentView === 'scanbook' && selectedCategory === 'pharmacy') return <PharmacyView onBack={handleBack} />;
+  if (currentView === 'scanbook' && selectedCategory === 'gs1') return <GS1View onBack={handleBack} />;
   if (currentView === 'scanbook' && selectedCategory) return <ScanBookView category={selectedCategory} onBack={handleBack} />;
   return <Dashboard user={user} onSelectCategory={handleSelectCategory} onLogout={handleLogout} />;
 }
