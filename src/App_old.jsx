@@ -51,7 +51,7 @@ const Barcode = ({ value, height = 60 }) => {
 
 // Grocery Scanbook Data
 const groceryData = {
-  title: "Grocery and General Merchandise POS Test Script",
+  title: "Grocery POS Test Script",
   loyaltyAccounts: [
     { name: "Leo Anders", email: "leo.anders@yemail.com", phone: "(919) 555-2222", address: "1457 Oak Grove Lane, Cary, NC" },
     { name: "Anna Schmidt", email: "anna.schmidt@myemail.com", phone: "(919) 555-1111", address: "1746 Willow Creek Road" },
@@ -72,7 +72,7 @@ const groceryData = {
 
 // Convenience / Fuel Scanbook Data
 const convenienceData = {
-  title: "Convenience and Fuel POS Test Script",
+  title: "Convenience / Fuel POS Test Script",
   loyaltyAccounts: groceryData.loyaltyAccounts,
   tests: [
     { id: 1, name: "Bundle Meal Deal", type: "BUNDLE_PRICE", promotion: "Spaghetti Night $5 Meal Deal", valid: "Jul 23, 2025 - Jul 30, 2099", discount: "$5 Bundle Price for all 3 items", steps: "Scan Spaghetti Noodles, Spaghetti Sauce, and Parmesan Cheese. Verify bundle price of $5 applies.", notes: null, items: [{ name: "Spaghetti Noodles", sku: "2920090794", barcode: "02920090794" }, { name: "Spaghetti Sauce", sku: "3620001375", barcode: "03620001375" }, { name: "Parmesan Cheese", sku: "2100061531", barcode: "02100061531" }] },
@@ -83,60 +83,6 @@ const convenienceData = {
     { id: 6, name: "Toys Threshold Deal", type: "AMOUNT_OFF", promotion: "Spend $50 on Toys Save $15 on Plush", valid: "Oct 23, 2025 - Oct 30, 2025", discount: "$15 OFF Plush toys", steps: "Add $50+ of toy items to cart, then scan Plush toy. Verify $15 discount applies to plush item.", notes: "Must spend $50 on toys before plush discount triggers", items: [{ name: "Toy Item 1", sku: "195464719176", barcode: "195464719176" }, { name: "Toy Item 2", sku: "195464731161", barcode: "195464731161" }, { name: "Plush Toy", sku: "19190845753", barcode: "19190845753" }] },
     { id: 7, name: "Closeout Sale", type: "PERCENT_OFF", promotion: "MixedNutCloseout", valid: "Oct 22, 2025 - Oct 24, 2025", discount: "50% OFF (Clearance)", steps: "Scan Mixed Nuts can. Verify 50% clearance discount applies automatically.", notes: "Limited time closeout - 3 days only", items: [{ name: "Mixed Nuts Can", sku: "2900001665", barcode: "02900001665" }] },
     { id: 8, name: "Loyalty Segment Deal", type: "AMOUNT_OFF", promotion: "Customer Segment Promotion", valid: "Dec 1, 2025 - Dec 9, 2042", discount: "$3 OFF per item", steps: "Scan loyalty card (must be in target segment), then scan CeraVe product. Verify $3 discount per item.", notes: "Requires customer to be in specific loyalty segment", items: [{ name: "CeraVe Moisturizing Cream", sku: "3606000537750", barcode: "3606000537750" }] }
-  ]
-};
-
-// Pharmacy Section Data with nested categories and promotions
-const pharmacyData = {
-  title: "Pharmacy",
-  categories: [
-    {
-      id: "pharmacy",
-      name: "Pharmacy",
-      icon: "💊",
-      items: [
-        { name: "Allergy Cetirizine Hydrochloride", sku: "31191716320", uom: "EA" },
-        { name: "Bacitracin", sku: "5042835827", uom: "EA" },
-        { name: "Calcium/D3 600mg", sku: "5042834903", uom: "EA" },
-        { name: "Famotidine Complete Berry 50 ct", sku: "71373364851", uom: "EA" },
-        { name: "Ibuprofen tablets 200mg", sku: "5042830876", uom: "EA" },
-        { name: "NB Hair, Skin, Nails Gummies", sku: "7431253545", uom: "EA" },
-        { name: "Neutrogena Sun SPF 55 3 pack", sku: "88517181403", uom: "EA" },
-        { name: "Sudafed", sku: "90003000000", uom: "EA" }
-      ]
-    },
-    {
-      id: "beauty",
-      name: "Beauty / Personal Care",
-      icon: "✨",
-      items: [
-        { name: "CeraVe Foaming Facial Cleanser", sku: "3606000537750", uom: "EACH" },
-        { name: "Cinnamon Crest", sku: "3700042729", uom: "EA" },
-        { name: "Colgate Optic White Toothpaste", sku: "3500045836", uom: "EA" },
-        { name: "Colgate Optic White Toothpaste Icy Fresh", sku: "3500097159", uom: "EA" },
-        { name: "Crest Gum Detoxify Toothpaste", sku: "3700075421", uom: "EA" },
-        { name: "Dove Mens Bar", sku: "1111101845", uom: "EA" },
-        { name: "Dove Mens Shampoo/Conditioner", sku: "7940061203", uom: "EA" },
-        { name: "GUM Toothbrush", sku: "7094212310", uom: "EA" },
-        { name: "Glowing Vitamin C Sheet Mask", sku: "10266", uom: "EA" },
-        { name: "Rejuv Niacinamide Sheet Mask", sku: "10271", uom: "EA" },
-        { name: "SS 3 piece Nail Files", sku: "71789710131", uom: "EA" },
-        { name: "SS Hand Lotion Peppermint", sku: "71789710033", uom: "EA" },
-        { name: "SS Hand Lotion Winter Berry", sku: "71789710032", uom: "EA" },
-        { name: "SS Lip Balm Sugar Cookie", sku: "71789710037", uom: "EA" },
-        { name: "Speed Stick", sku: "2220000490", uom: "EA" },
-        { name: "Toms Luminous White", sku: "7732647014", uom: "EA" },
-        { name: "Toms Unscented Deoderant", sku: "7732661425", uom: "EA" },
-        { name: "Triple Blade Razors", sku: "88867009863", uom: "EA" }
-      ]
-    }
-  ],
-  promotions: [
-    { id: 1, categoryId: "pharmacy", name: "BOGO 50% Pain Relief", type: "PERCENT_OFF", promotion: "BOGO 50% Ibuprofen", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "Buy 1, Get 2nd 50% OFF", steps: "Scan 2x Ibuprofen tablets. Verify 50% discount applies to second item.", notes: null, items: [{ name: "Ibuprofen tablets 200mg", sku: "5042830876", barcode: "050428308769" }] },
-    { id: 2, categoryId: "pharmacy", name: "Allergy Season Savings", type: "AMOUNT_OFF", promotion: "Buy 2 Allergy Items Save $5", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "$5 OFF when buying 2+ allergy products", steps: "Scan 2 or more allergy products. Verify $5 discount applies to basket.", notes: "Requires 2+ qualifying allergy items", items: [{ name: "Allergy Cetirizine Hydrochloride", sku: "31191716320", barcode: "31191716320" }, { name: "Sudafed", sku: "90003000000", barcode: "90003000000" }] },
-    { id: 3, categoryId: "beauty", name: "Oral Care Bundle", type: "BUNDLE_PRICE", promotion: "Toothpaste + Toothbrush Bundle $6.99", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "Bundle Price $6.99 for toothpaste + toothbrush", steps: "Scan Colgate Optic White Toothpaste and GUM Toothbrush. Verify bundle price of $6.99 applies.", notes: null, items: [{ name: "Colgate Optic White Toothpaste", sku: "3500045836", barcode: "03500045836" }, { name: "GUM Toothbrush", sku: "7094212310", barcode: "07094212310" }] },
-    { id: 4, categoryId: "beauty", name: "Skincare Sheet Mask Special", type: "FREE_ITEM", promotion: "Buy 2 Masks Get 1 Free", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "Buy 2 Sheet Masks, Get 3rd FREE", steps: "Scan 3x Sheet Masks (any combination). Verify lowest priced mask is FREE.", notes: "Mix and match any sheet masks", items: [{ name: "Glowing Vitamin C Sheet Mask", sku: "10266", barcode: "10266" }, { name: "Rejuv Niacinamide Sheet Mask", sku: "10271", barcode: "10271" }] },
-    { id: 5, categoryId: "beauty", name: "Personal Care Multi-Buy", type: "PERCENT_OFF", promotion: "Buy 3 Personal Care Items Save 20%", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "20% OFF when buying 3+ items", steps: "Scan 3 or more personal care items. Verify 20% discount applies to all qualifying items.", notes: "Mix and match qualifying items", items: [{ name: "Dove Mens Bar", sku: "1111101845", barcode: "01111101845" }, { name: "Dove Mens Shampoo/Conditioner", sku: "7940061203", barcode: "07940061203" }, { name: "Speed Stick", sku: "2220000490", barcode: "02220000490" }, { name: "Triple Blade Razors", sku: "88867009863", barcode: "88867009863" }] }
   ]
 };
 
@@ -826,7 +772,25 @@ const itemsData = {
         { name: "Sunflowers", sku: "19515891362", uom: "EA" },
         { name: "Yellow Daisies", sku: "19515891573", uom: "EA" }
       ] },
-
+    { id: "MEIJER_ITEMS", name: "MEIJER ITEMS", items: [
+        { name: "FT Ultra LT Rain Poncho", sku: "64748404010", uom: "EACH" },
+        { name: "Frederik's Bronze Cut Cavatelli", sku: "70882017012", uom: "EACH" },
+        { name: "Frederik's Bronze Cut Orzo", sku: "71373313109", uom: "EACH" },
+        { name: "Frederik's Bronze Cut Penne Rigate", sku: "70882016993", uom: "EACH" },
+        { name: "Frederik's Four Cheese Risotto", sku: "70882002009", uom: "EACH" },
+        { name: "Frederik's Roasted Garlic Risotto", sku: "70882002010", uom: "EACH" },
+        { name: "Frederik's Tomato Risotto", sku: "70882002011", uom: "EACH" },
+        { name: "LS Crew Tee Snow Htr", sku: "71928322063", uom: "EACH" },
+        { name: "Lamb Chop Cat Toy", sku: "71373358709", uom: "EACH" },
+        { name: "Meijer Original Potato Chips", sku: "71373346708", uom: "EACH" },
+        { name: "Meijer Peanut Butter Trail Mix", sku: "71373353871", uom: "EACH" },
+        { name: "Meijer Sweet & Salty Trail Mix", sku: "70882000506", uom: "EACH" },
+        { name: "Meijer Whole Roasted Almonds", sku: "71373353850", uom: "EACH" },
+        { name: "Moisturizing Sunscreen", sku: "70882036833", uom: "EACH" },
+        { name: "Peanut, Drk Choco Almond Protien Bars", sku: "71373312016", uom: "EACH" },
+        { name: "True Goodness Dlx Mixed Nuts", sku: "71928380896", uom: "EACH" },
+        { name: "Umbrella", sku: "95486321785", uom: "EACH" }
+      ] },
     { id: "NO_TAX", name: "NO TAX", items: [
         { name: "Water", sku: "082657500690", uom: "EACH" }
       ] },
@@ -861,7 +825,7 @@ const Login = ({ onLogin }) => {
     } else if (username === 'demo' && password === 'demo') {
       onLogin(username);
     } else {
-      setError('Invalid credentials. Please try again.');
+      setError('Invalid credentials. Try admin/elera2025 or demo/demo');
     }
   };
 
@@ -890,7 +854,11 @@ const Login = ({ onLogin }) => {
           {error && <p className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">{error}</p>}
           <button type="button" onClick={handleLogin} className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition duration-200 cursor-pointer">Sign In</button>
         </div>
-        <p className="mt-6 text-center text-xs text-slate-400">Version 2.0 • United States Edition 2026</p>
+        <div className="mt-6 p-3 bg-slate-50 rounded-lg text-center">
+          <p className="text-xs text-slate-500 mb-1">Test Credentials:</p>
+          <p className="text-sm font-mono text-slate-700">admin / elera2025</p>
+        </div>
+        <p className="mt-4 text-center text-xs text-slate-400">Version 2.0 • United States Edition 2026</p>
       </div>
     </div>
   );
@@ -913,15 +881,7 @@ const CategoryCard = ({ title, icon, description, itemCount, onClick, available 
 
 // Dashboard Component
 const Dashboard = ({ user, onSelectCategory, onLogout }) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const totalItems = itemsData.groups.reduce((sum, g) => sum + g.items.length, 0);
-  const pharmacyItems = pharmacyData.categories.reduce((sum, c) => sum + c.items.length, 0);
-
-  const handleSearch = (e) => {
-    if (e.key === 'Enter' && searchTerm.trim()) {
-      onSelectCategory('items', searchTerm.trim());
-    }
-  };
   
   return (
     <div className="min-h-screen bg-slate-100">
@@ -934,19 +894,6 @@ const Dashboard = ({ user, onSelectCategory, onLogout }) => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <input 
-                type="text" 
-                placeholder="Search items..." 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-                onKeyDown={handleSearch}
-                className="px-4 py-2 pl-9 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent w-48" 
-              />
-              <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
             <span className="text-sm text-slate-600">Welcome, <strong>{user}</strong></span>
             <button onClick={onLogout} className="text-sm text-red-600 hover:text-red-700 font-medium cursor-pointer">Sign Out</button>
           </div>
@@ -958,10 +905,10 @@ const Dashboard = ({ user, onSelectCategory, onLogout }) => {
           <p className="text-slate-600">Choose a category to access POS test scenarios and scannable barcodes</p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <CategoryCard title="Grocery and General Merchandise" icon="🛒" description="Full-service grocery POS testing with produce, promotions, and loyalty programs." itemCount={8} onClick={() => onSelectCategory('grocery')} available={true} />
-          <CategoryCard title="Convenience and Fuel" icon="⛽" description="C-store and fuel station POS scenarios including bundles, clearance, and loyalty segments." itemCount={8} onClick={() => onSelectCategory('convenience')} available={true} />
+          <CategoryCard title="Grocery" icon="🛒" description="Full-service grocery POS testing with produce, promotions, and loyalty programs." itemCount={8} onClick={() => onSelectCategory('grocery')} available={true} />
+          <CategoryCard title="Convenience / Fuel" icon="⛽" description="C-store and fuel station POS scenarios including bundles, clearance, and loyalty segments." itemCount={8} onClick={() => onSelectCategory('convenience')} available={true} />
           <CategoryCard title="Items" icon="📦" description="Browse the complete item catalog with SKUs, barcodes, and department groupings." itemCount={totalItems} onClick={() => onSelectCategory('items')} available={true} />
-          <CategoryCard title="Pharmacy" icon="💊" description="Pharmacy and beauty items with OTC medications, skincare, and personal care products." itemCount={pharmacyItems} onClick={() => onSelectCategory('pharmacy')} available={true} />
+          <CategoryCard title="Pharmacy" icon="💊" description="Pharmacy retail testing with prescription workflows and controlled substances." itemCount={0} onClick={() => onSelectCategory('pharmacy')} available={false} />
         </div>
       </main>
     </div>
@@ -1087,19 +1034,16 @@ const ScanBookView = ({ category, onBack }) => {
 };
 
 // Items View Component
-const ItemsView = ({ onBack, initialSearch = '' }) => {
+const ItemsView = ({ onBack }) => {
   const [selectedGroup, setSelectedGroup] = useState(itemsData.groups[0]?.id || '');
-  const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const currentGroup = itemsData.groups.find(g => g.id === selectedGroup);
   
-  // If searching, search across ALL groups; otherwise filter current group
-  const filteredItems = searchTerm 
-    ? itemsData.groups.flatMap(g => g.items.filter(item => 
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku.toLowerCase().includes(searchTerm.toLowerCase())
-      ))
-    : (currentGroup?.items || []);
+  const filteredItems = currentGroup?.items.filter(item => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.sku.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -1134,7 +1078,7 @@ const ItemsView = ({ onBack, initialSearch = '' }) => {
           <div className="flex-1">
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
-                <h2 className="text-2xl font-bold">{searchTerm ? 'Search Results' : (currentGroup?.name || 'Select a Department')}</h2>
+                <h2 className="text-2xl font-bold">{currentGroup?.name || 'Select a Department'}</h2>
                 <p className="text-blue-100 mt-1">{filteredItems.length} items {searchTerm && `matching "${searchTerm}"`}</p>
               </div>
               <div className="p-6">
@@ -1169,271 +1113,19 @@ const ItemsView = ({ onBack, initialSearch = '' }) => {
   );
 };
 
-// Pharmacy View Component with promotions and items
-const PharmacyView = ({ onBack }) => {
-  const [selectedPromotion, setSelectedPromotion] = useState(1);
-  const [viewMode, setViewMode] = useState('promotions');
-  const [selectedCategory, setSelectedCategory] = useState('pharmacy');
-  
-  const currentPromotion = pharmacyData.promotions.find(p => p.id === selectedPromotion);
-  const currentCategory = pharmacyData.categories.find(c => c.id === selectedCategory);
-  
-  const pharmacyPromos = pharmacyData.promotions.filter(p => p.categoryId === 'pharmacy');
-  const beautyPromos = pharmacyData.promotions.filter(p => p.categoryId === 'beauty');
-  const totalItems = pharmacyData.categories.reduce((sum, c) => sum + c.items.length, 0);
-
-  return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={onBack} className="text-slate-600 hover:text-slate-800 cursor-pointer">← Back</button>
-            <div className="h-6 w-px bg-slate-300"></div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-800">{pharmacyData.title}</h1>
-              <p className="text-xs text-slate-500">{pharmacyData.promotions.length} promotions • {totalItems} items</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setViewMode('promotions')} className={`px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${viewMode === 'promotions' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Promotions</button>
-            <button onClick={() => setViewMode('items')} className={`px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${viewMode === 'items' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>All Items</button>
-          </div>
-        </div>
-      </header>
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          <div className="w-72 flex-shrink-0">
-            {viewMode === 'promotions' ? (
-              <>
-                <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">💊</span>
-                    <h3 className="font-semibold text-slate-700">Pharmacy</h3>
-                    <span className="text-xs text-slate-400">({pharmacyPromos.length})</span>
-                  </div>
-                  <div className="space-y-2">
-                    {pharmacyPromos.map(promo => (
-                      <div key={promo.id} onClick={() => setSelectedPromotion(promo.id)} className={`p-3 rounded-lg cursor-pointer transition ${selectedPromotion === promo.id ? 'bg-purple-50 border-2 border-purple-500' : 'bg-white border border-slate-200 hover:border-purple-300'}`}>
-                        <div className="flex items-start justify-between mb-1">
-                          <span className="text-xs font-bold text-slate-400">PROMO {promo.id}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${typeColors[promo.type] || 'bg-slate-100 text-slate-600'}`}>{promo.type}</span>
-                        </div>
-                        <h4 className="font-medium text-slate-800 text-sm">{promo.name}</h4>
-                        <p className="text-xs text-slate-500 mt-1">{promo.items.length} items</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">✨</span>
-                    <h3 className="font-semibold text-slate-700">Beauty / Personal Care</h3>
-                    <span className="text-xs text-slate-400">({beautyPromos.length})</span>
-                  </div>
-                  <div className="space-y-2">
-                    {beautyPromos.map(promo => (
-                      <div key={promo.id} onClick={() => setSelectedPromotion(promo.id)} className={`p-3 rounded-lg cursor-pointer transition ${selectedPromotion === promo.id ? 'bg-purple-50 border-2 border-purple-500' : 'bg-white border border-slate-200 hover:border-purple-300'}`}>
-                        <div className="flex items-start justify-between mb-1">
-                          <span className="text-xs font-bold text-slate-400">PROMO {promo.id}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${typeColors[promo.type] || 'bg-slate-100 text-slate-600'}`}>{promo.type}</span>
-                        </div>
-                        <h4 className="font-medium text-slate-800 text-sm">{promo.name}</h4>
-                        <p className="text-xs text-slate-500 mt-1">{promo.items.length} items</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 className="font-semibold text-slate-700 mb-3">Categories</h3>
-                <div className="space-y-2">
-                  {pharmacyData.categories.map(category => (
-                    <div key={category.id} onClick={() => setSelectedCategory(category.id)} className={`p-4 rounded-lg cursor-pointer transition ${selectedCategory === category.id ? 'bg-purple-50 border-2 border-purple-500' : 'bg-white border border-slate-200 hover:border-purple-300'}`}>
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{category.icon}</span>
-                        <div>
-                          <div className="font-semibold text-slate-800">{category.name}</div>
-                          <div className="text-xs text-slate-500">{category.items.length} items</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          <div className="flex-1">
-            {viewMode === 'promotions' && currentPromotion ? (
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl">{currentPromotion.categoryId === 'pharmacy' ? '💊' : '✨'}</span>
-                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">PROMO {currentPromotion.id}</span>
-                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm">{currentPromotion.type}</span>
-                  </div>
-                  <h2 className="text-2xl font-bold">{currentPromotion.name}</h2>
-                </div>
-                <div className="p-6">
-                  <div className="bg-slate-50 rounded-lg p-4 mb-6">
-                    <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                      <div><span className="text-slate-500">Promotion:</span><p className="font-semibold text-slate-800">{currentPromotion.promotion}</p></div>
-                      <div><span className="text-slate-500">Valid:</span><p className="font-semibold text-slate-800">{currentPromotion.valid}</p></div>
-                      <div className="sm:col-span-2"><span className="text-slate-500">Discount:</span><p className="font-semibold text-green-700 text-lg">{currentPromotion.discount}</p></div>
-                    </div>
-                  </div>
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-slate-700 mb-2">Test Steps</h3>
-                    <p className="text-slate-600 bg-yellow-50 border border-yellow-200 rounded-lg p-3">{currentPromotion.steps}</p>
-                  </div>
-                  {currentPromotion.notes && (
-                    <div className="mb-6">
-                      <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <span className="text-lg">⚠️</span>
-                        <span className="font-medium">{currentPromotion.notes}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <h3 className="font-semibold text-slate-700 mb-4">Qualifying Items</h3>
-                    <div className="space-y-4">
-                      {currentPromotion.items.map((item, i) => (
-                        <div key={i} className="border border-slate-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-slate-800">{item.name}</h4>
-                            <div className="flex gap-4 mt-1 text-sm">
-                              <span className="text-slate-500">SKU: <span className="font-mono text-slate-700">{item.sku}</span></span>
-                              <span className="text-slate-500">Barcode: <span className="font-mono text-slate-700">{item.barcode}</span></span>
-                            </div>
-                          </div>
-                          <div className="bg-white border border-slate-200 rounded-lg p-2">
-                            <Barcode value={item.barcode} height={50} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{currentCategory?.icon}</span>
-                    <div>
-                      <h2 className="text-2xl font-bold">{currentCategory?.name || 'Select a Category'}</h2>
-                      <p className="text-purple-100 mt-1">{currentCategory?.items.length} items</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="grid gap-4">
-                    {currentCategory?.items.map((item, i) => (
-                      <div key={i} className="border border-slate-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-slate-800">{item.name}</h4>
-                          <div className="flex gap-4 mt-1 text-sm">
-                            <span className="text-slate-500">SKU: <span className="font-mono text-slate-700">{item.sku}</span></span>
-                            <span className="text-slate-500">UOM: <span className="font-mono text-slate-700">{item.uom}</span></span>
-                          </div>
-                        </div>
-                        <div className="bg-white border border-slate-200 rounded-lg p-2">
-                          <Barcode value={item.sku} height={50} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-};
-
 // Main App Component
 export default function App() {
-  const [user, setUser] = useState(() => localStorage.getItem('elera_user'));
+  const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [initialSearch, setInitialSearch] = useState('');
 
-  // Handle browser back/forward buttons
-  useEffect(() => {
-    const handlePopState = (e) => {
-      // Always check localStorage to ensure we stay logged in
-      const storedUser = localStorage.getItem('elera_user');
-      if (storedUser && !user) {
-        setUser(storedUser);
-      }
-      
-      if (e.state && e.state.view) {
-        setCurrentView(e.state.view);
-        setSelectedCategory(e.state.category || null);
-        setInitialSearch(e.state.search || '');
-      } else {
-        // No valid state - stay on dashboard if logged in
-        setCurrentView('dashboard');
-        setSelectedCategory(null);
-        setInitialSearch('');
-        // Replace with valid state to prevent further back issues
-        window.history.replaceState({ view: 'dashboard', category: null, search: '' }, '');
-      }
-    };
+  const handleLogin = (username) => setUser(username);
+  const handleLogout = () => { setUser(null); setCurrentView('dashboard'); setSelectedCategory(null); };
+  const handleSelectCategory = (category) => { setSelectedCategory(category); setCurrentView('scanbook'); };
+  const handleBack = () => { setCurrentView('dashboard'); setSelectedCategory(null); };
 
-    window.addEventListener('popstate', handlePopState);
-    
-    // Set initial state on mount
-    window.history.replaceState({ view: currentView, category: selectedCategory, search: initialSearch }, '');
-
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  // Sync user state with localStorage on mount and changes
-  useEffect(() => {
-    const storedUser = localStorage.getItem('elera_user');
-    if (storedUser && !user) {
-      setUser(storedUser);
-    }
-  }, [user]);
-
-  const handleLogin = (username) => {
-    localStorage.setItem('elera_user', username);
-    setUser(username);
-    window.history.replaceState({ view: 'dashboard', category: null, search: '' }, '');
-  };
-  const handleLogout = () => {
-    localStorage.removeItem('elera_user');
-    setUser(null);
-    setCurrentView('dashboard');
-    setSelectedCategory(null);
-    setInitialSearch('');
-    window.history.replaceState({ view: 'dashboard', category: null, search: '' }, '');
-  };
-  const handleSelectCategory = (category, search = '') => {
-    setSelectedCategory(category);
-    setCurrentView('scanbook');
-    setInitialSearch(search);
-    window.history.pushState({ view: 'scanbook', category, search }, '');
-  };
-  const handleBack = () => {
-    window.history.back();
-  };
-
-  // Double-check localStorage before showing login
-  const storedUser = localStorage.getItem('elera_user');
-  if (!user && !storedUser) return <Login onLogin={handleLogin} />;
-  
-  // If localStorage has user but state doesn't, update state
-  if (!user && storedUser) {
-    setUser(storedUser);
-    return null; // Will re-render with correct user
-  }
-
-  if (currentView === 'scanbook' && selectedCategory === 'items') return <ItemsView onBack={handleBack} initialSearch={initialSearch} />;
-  if (currentView === 'scanbook' && selectedCategory === 'pharmacy') return <PharmacyView onBack={handleBack} />;
+  if (!user) return <Login onLogin={handleLogin} />;
+  if (currentView === 'scanbook' && selectedCategory === 'items') return <ItemsView onBack={handleBack} />;
   if (currentView === 'scanbook' && selectedCategory) return <ScanBookView category={selectedCategory} onBack={handleBack} />;
   return <Dashboard user={user} onSelectCategory={handleSelectCategory} onLogout={handleLogout} />;
 }
