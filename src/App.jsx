@@ -1,4 +1,78 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
+
+// Dark Mode Context
+const DarkModeContext = createContext();
+
+const useDarkMode = () => {
+  const context = useContext(DarkModeContext);
+  if (!context) throw new Error('useDarkMode must be used within DarkModeProvider');
+  return context;
+};
+
+const DarkModeProvider = ({ children }) => {
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('elera_darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('elera_darkMode', JSON.stringify(darkMode));
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  return (
+    <DarkModeContext.Provider value={{ darkMode, setDarkMode, toggleDarkMode: () => setDarkMode(d => !d) }}>
+      {children}
+    </DarkModeContext.Provider>
+  );
+};
+
+// Copy Button Component
+const CopyButton = ({ text, label = "Copy" }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className={`text-xs px-2 py-1 rounded transition cursor-pointer ${
+        copied 
+          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
+          : 'bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300'
+      }`}
+    >
+      {copied ? '✓ Copied!' : label}
+    </button>
+  );
+};
+
+// Dark Mode Toggle Button
+const DarkModeToggle = () => {
+  const { darkMode, toggleDarkMode } = useDarkMode();
+  return (
+    <button
+      onClick={toggleDarkMode}
+      className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition cursor-pointer"
+      title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+    >
+      {darkMode ? '☀️' : '🌙'}
+    </button>
+  );
+};
 
 // Barcode component using canvas (1D linear barcode)
 const Barcode = ({ value, height = 60 }) => {
@@ -105,18 +179,18 @@ const DataMatrixBarcode = ({ value, gs1Data, size = 150 }) => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center p-4 bg-purple-50 rounded-lg border-2 border-dashed border-purple-300" style={{ width: 140, minHeight: 140 }}>
+      <div className="flex flex-col items-center justify-center p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg border-2 border-dashed border-purple-300 dark:border-purple-700" style={{ width: 140, minHeight: 140 }}>
         <span className="text-3xl mb-2">📊</span>
-        <span className="text-xs font-semibold text-purple-700 text-center">GS1 2D DataMatrix</span>
-        <span className="text-xs font-mono text-purple-600 mt-1 text-center break-all px-2">{value}</span>
+        <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 text-center">GS1 2D DataMatrix</span>
+        <span className="text-xs font-mono text-purple-600 dark:text-purple-400 mt-1 text-center break-all px-2">{value}</span>
       </div>
     );
   }
 
   if (!loaded) {
     return (
-      <div className="flex items-center justify-center bg-slate-100 rounded-lg animate-pulse" style={{ width: 140, height: 140 }}>
-        <span className="text-slate-400 text-sm">Loading...</span>
+      <div className="flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-lg animate-pulse" style={{ width: 140, height: 140 }}>
+        <span className="text-slate-400 dark:text-slate-500 text-sm">Loading...</span>
       </div>
     );
   }
@@ -169,18 +243,18 @@ const Code128Barcode = ({ value, height = 60 }) => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center p-4 bg-indigo-50 rounded-lg border-2 border-dashed border-indigo-300" style={{ minWidth: 150 }}>
+      <div className="flex flex-col items-center justify-center p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border-2 border-dashed border-indigo-300 dark:border-indigo-700" style={{ minWidth: 150 }}>
         <span className="text-2xl mb-1">📋</span>
-        <span className="text-xs font-semibold text-indigo-700">Code 128</span>
-        <span className="text-xs font-mono text-indigo-600 mt-1">{value}</span>
+        <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Code 128</span>
+        <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 mt-1">{value}</span>
       </div>
     );
   }
 
   if (!loaded) {
     return (
-      <div className="flex items-center justify-center bg-slate-100 rounded-lg animate-pulse" style={{ width: 150, height: 80 }}>
-        <span className="text-slate-400 text-sm">Loading...</span>
+      <div className="flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-lg animate-pulse" style={{ width: 150, height: 80 }}>
+        <span className="text-slate-400 dark:text-slate-500 text-sm">Loading...</span>
       </div>
     );
   }
@@ -273,17 +347,10 @@ const pharmacyData = {
         { name: "Triple Blade Razors", sku: "88867009863", uom: "EA" }
       ]
     }
-  ],
-  promotions: [
-    { id: 1, categoryId: "pharmacy", name: "BOGO 50% Pain Relief", type: "PERCENT_OFF", promotion: "BOGO 50% Ibuprofen", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "Buy 1, Get 2nd 50% OFF", steps: "Scan 2x Ibuprofen tablets. Verify 50% discount applies to second item.", notes: null, items: [{ name: "Ibuprofen tablets 200mg", sku: "5042830876", barcode: "050428308769" }] },
-    { id: 2, categoryId: "pharmacy", name: "Allergy Season Savings", type: "AMOUNT_OFF", promotion: "Buy 2 Allergy Items Save $5", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "$5 OFF when buying 2+ allergy products", steps: "Scan 2 or more allergy products. Verify $5 discount applies to basket.", notes: "Requires 2+ qualifying allergy items", items: [{ name: "Allergy Cetirizine Hydrochloride", sku: "31191716320", barcode: "31191716320" }, { name: "Sudafed", sku: "90003000000", barcode: "90003000000" }] },
-    { id: 3, categoryId: "beauty", name: "Oral Care Bundle", type: "BUNDLE_PRICE", promotion: "Toothpaste + Toothbrush Bundle $6.99", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "Bundle Price $6.99 for toothpaste + toothbrush", steps: "Scan Colgate Optic White Toothpaste and GUM Toothbrush. Verify bundle price of $6.99 applies.", notes: null, items: [{ name: "Colgate Optic White Toothpaste", sku: "3500045836", barcode: "03500045836" }, { name: "GUM Toothbrush", sku: "7094212310", barcode: "07094212310" }] },
-    { id: 4, categoryId: "beauty", name: "Skincare Sheet Mask Special", type: "FREE_ITEM", promotion: "Buy 2 Masks Get 1 Free", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "Buy 2 Sheet Masks, Get 3rd FREE", steps: "Scan 3x Sheet Masks (any combination). Verify lowest priced mask is FREE.", notes: "Mix and match any sheet masks", items: [{ name: "Glowing Vitamin C Sheet Mask", sku: "10266", barcode: "10266" }, { name: "Rejuv Niacinamide Sheet Mask", sku: "10271", barcode: "10271" }] },
-    { id: 5, categoryId: "beauty", name: "Personal Care Multi-Buy", type: "PERCENT_OFF", promotion: "Buy 3 Personal Care Items Save 20%", valid: "Jan 1, 2025 - Dec 31, 2099", discount: "20% OFF when buying 3+ items", steps: "Scan 3 or more personal care items. Verify 20% discount applies to all qualifying items.", notes: "Mix and match qualifying items", items: [{ name: "Dove Mens Bar", sku: "1111101845", barcode: "01111101845" }, { name: "Dove Mens Shampoo/Conditioner", sku: "7940061203", barcode: "07940061203" }, { name: "Speed Stick", sku: "2220000490", barcode: "02220000490" }, { name: "Triple Blade Razors", sku: "88867009863", barcode: "88867009863" }] }
   ]
 };
 
-// GS1-2D DataMatrix Barcodes Data
+// GS1 2D DataMatrix Items
 const gs1DataItems = {
   title: "GS1-2D DataMatrix Barcodes",
   subtitle: "Barcodes with embedded GS1 Application Identifiers for compliance validation",
@@ -330,6 +397,7 @@ const gs1DataItems = {
   ]
 };
 
+// Items Data - Department catalog
 const itemsData = {
   title: "Item Catalog Browser",
   groups: [
@@ -354,689 +422,207 @@ const itemsData = {
         { name: "Olipop", sku: "850027702889", uom: "EACH" },
         { name: "Water", sku: "917810", uom: "EA" }
       ] },
-    { id: "Dept_10_H&B", name: "10 H&B", items: [
-        { name: "Allergy Cetirizine Hydrochloride", sku: "31191716320", uom: "EA" },
-        { name: "Bacitracin", sku: "5042835827", uom: "EA" },
-        { name: "Calcium/D3 600mg", sku: "5042834903", uom: "EA" },
-        { name: "CeraVe Foaming Facial Cleanser", sku: "3606000537750", uom: "EACH" },
-        { name: "Cinnamon Crest", sku: "3700042729", uom: "EA" },
-        { name: "Colgate Optic White Toothpaste", sku: "3500045836", uom: "EA" },
-        { name: "Colgate Optic White Toothpaste Icy Fresh", sku: "3500097159", uom: "EA" },
-        { name: "Crest Gum Detoxify Toothpaste", sku: "3700075421", uom: "EA" },
-        { name: "Dove Mens Bar", sku: "1111101845", uom: "EA" },
-        { name: "Dove Mens Shampoo/Conditioner", sku: "7940061203", uom: "EA" },
-        { name: "Famotidine Complete Berry 50 ct", sku: "71373364851", uom: "EA" },
-        { name: "GUM Toothbrush", sku: "7094212310", uom: "EA" },
-        { name: "Glowing Vitamin C Sheet Mask", sku: "10266", uom: "EA" },
-        { name: "Ibuprofen tablets 200mg", sku: "5042830876", uom: "EA" },
-        { name: "NB Hair, Skin, Nails Gummies", sku: "7431253545", uom: "EA" },
-        { name: "Neutrogena Sun SPF 55 3 pack", sku: "88517181403", uom: "EA" },
-        { name: "Rejuv Niacinamide Sheet Mask", sku: "10271", uom: "EA" },
-        { name: "SS 3 piece Nail Files", sku: "71789710131", uom: "EA" },
-        { name: "SS Hand Lotion Peppermint", sku: "71789710033", uom: "EA" },
-        { name: "SS Hand Lotion Winter Berry", sku: "71789710032", uom: "EA" },
-        { name: "SS Lip Balm Sugar Cookie", sku: "71789710037", uom: "EA" },
-        { name: "Speed Stick", sku: "2220000490", uom: "EA" },
-        { name: "Sudafed", sku: "90003000000", uom: "EA" },
-        { name: "Toms Luminous White", sku: "7732647014", uom: "EA" },
-        { name: "Toms Unscented Deoderant", sku: "7732661425", uom: "EA" },
-        { name: "Triple Blade Razors", sku: "88867009863", uom: "EA" }
-      ] },
-    { id: "Dept_11_HomeGoods", name: "11 HomeGoods", items: [
-        { name: "100th Anniversary Small Reusable Bag", sku: "77515340242", uom: "EA" },
-        { name: "Adjustable Chair", sku: "710014", uom: "EA" },
-        { name: "Adult Poncho", sku: "8281503100", uom: "EA" },
-        { name: "Bear Storage Basket", sku: "72753202173", uom: "EA" },
-        { name: "Black LED Desk Lamp", sku: "710031", uom: "EA" },
-        { name: "Black Management Chair", sku: "710011", uom: "EA" },
-        { name: "Blue Swivel Armchair", sku: "710002", uom: "EA" },
-        { name: "Blue Tall Back Chair", sku: "710010", uom: "EA" },
-        { name: "Brass Swing Arm LED Lamp", sku: "710032", uom: "EA" },
-        { name: "Chair with Neck Rest", sku: "710013", uom: "EA" },
-        { name: "Desk", sku: "710050", uom: "EA" },
-        { name: "Diffuser", sku: "77777724041", uom: "EA" },
-        { name: "Ergonomic Chair", sku: "710012", uom: "EA" },
-        { name: "Espresso Machine", sku: "72527291991", uom: "EA" },
-        { name: "Filing Cabinet", sku: "710020", uom: "EA" },
-        { name: "Flora Bunda", sku: "710060", uom: "EA" },
-        { name: "Green Swivel Armchair", sku: "710003", uom: "EA" },
-        { name: "Grey Pillow", sku: "19071450319", uom: "EA" },
-        { name: "Grey Swivel Armchair", sku: "710001", uom: "EA" },
-        { name: "Holiday basket", sku: "73116104880", uom: "EA" },
-        { name: "Inflatable Gnome", sku: "19546408628", uom: "EA" },
-        { name: "Julia Gash Tote", sku: "24089133", uom: "EA" },
-        { name: "Kitchen Shears", sku: "7931978010601", uom: "EA" },
-        { name: "LED HDD TV", sku: "84008057050", uom: "EA" },
-        { name: "Low-cost Chair", sku: "710015", uom: "EA" },
-        { name: "Luncheon Napkins 150 ct", sku: "88867012096", uom: "EA" },
-        { name: "Mini Umbrella", sku: "8281580394", uom: "EA" },
-        { name: "Off White Swivel Armchair", sku: "710004", uom: "EA" },
-        { name: "Orange Swivel Armchair", sku: "710005", uom: "EA" },
-        { name: "Party Tub", sku: "4122656061", uom: "EA" },
-        { name: "Pendulum Clock", sku: "75864730645", uom: "EA" },
-        { name: "Red Desk Lamp", sku: "710030", uom: "EA" },
-        { name: "Red Napkins", sku: "430421812841", uom: "EA" },
-        { name: "Reusable Bag", sku: "1111177710", uom: "EA" },
-        { name: "Round Pink Pillow", sku: "19190845753", uom: "EA" },
-        { name: "Sea Salt Candle", sku: "64765811572", uom: "EA" },
-        { name: "Shopping Bag, Reusable", sku: "7789027332", uom: "EA" },
-        { name: "Silver Wire Frame", sku: "82161412314", uom: "EA" },
-        { name: "Sky Blue Swivel Armchair", sku: "710006", uom: "EA" },
-        { name: "TWinCraft Toronto Maple Leafs 5-Pack Key Ring and Fridge Magnet Set", sku: "19416688259", uom: "EACH" },
-        { name: "Tablecloth Black", sku: "63927770261", uom: "EA" },
-        { name: "Tablecloth Red", sku: "63927768385", uom: "EA" },
-        { name: "Tervis Toronto Maple Leafs 24oz. Tradition Classic Water Bottle", sku: "19335526039", uom: "EACH" },
-        { name: "Toy Box Plush Fox and Unicorn", sku: "195464719176", uom: "EACH" },
-        { name: "Toy Box Plush Fox and Unicorn", sku: "19546471917", uom: "EACH" },
-        { name: "Toy Box Plush Woodland Friend", sku: "19546473116", uom: "EACH" },
-        { name: "Toy Box Plush Woodland Friend", sku: "195464731161", uom: "EACH" },
-        { name: "Turquoise Pillow", sku: "710100", uom: "EA" },
-        { name: "Vanilla Birch Candle", sku: "75487041308", uom: "EA" },
-        { name: "Wooden Bookcase", sku: "710040", uom: "EA" },
-        { name: "Yellow Swivel Armchair", sku: "710007", uom: "EA" }
-      ] },
-    { id: "Dept_121_Wine", name: "121 Wine", items: [
-        { name: "19 Crimes Cali Red “Snoop Dog�?", sku: "920631", uom: "EACH" },
-        { name: "19 Crimes Pinot Noir The Punishment", sku: "920632", uom: "EACH" },
-        { name: "19 Crimes Red Blend", sku: "920633", uom: "EACH" }
-      ] },
-    { id: "Dept_12_Alcohol", name: "12 Alcohol", items: [
-        { name: " Dragon Fire Blueberry", sku: "164853", uom: "EACH" },
-        { name: "A to Z Wineworks Oregon Rose 750ml", sku: "168256", uom: "EACH" },
-        { name: "Brut Champagne - 750.0 ml Veuve Clicquot Yellow Label ", sku: "05020", uom: "EA" },
-        { name: "Corona Light", sku: "21", uom: "EA" },
-        { name: "Dragon Fire Grape", sku: "167070", uom: "EACH" },
-        { name: "Dragon Fire Green Apple", sku: "167062", uom: "EACH" },
-        { name: "Dragon Fire Mango", sku: "167069", uom: "EACH" },
-        { name: "Dragon Fire Peach", sku: "167067", uom: "EACH" },
-        { name: "Dragon Fire Pink Lemonade", sku: "167077", uom: "EACH" },
-        { name: "Dragon Fire Strawberry", sku: "167066", uom: "EACH" },
-        { name: "Glen Ellen Chardonnay", sku: "807200000", uom: "EACH" },
-        { name: "Keg Heineken 1/2 Barrel", sku: "keghein12", uom: "EACH" },
-        { name: "Keg Heineken 1/4 Barrel", sku: "keghein14", uom: "EACH" },
-        { name: "Keg Heineken 1/6 Barrel", sku: "keghein16", uom: "EACH" },
-        { name: "Keg Miller Genuine Draft 1/2 Barrel", sku: "kegmgd12", uom: "EACH" },
-        { name: "Keg Miller Genuine Draft 1/4 Barrel", sku: "kegmgd14", uom: "EACH" },
-        { name: "Keg Miller Genuine Draft 1/6 Barrel", sku: "kegmgd16", uom: "EACH" },
-        { name: "Keg Miller High Life 1/2 Barrel", sku: "kegmhl12", uom: "EACH" },
-        { name: "Keg Miller High Life 1/4 Barrel", sku: "kegmhl14", uom: "EACH" },
-        { name: "Keg Miller High Life 1/6 Barrel", sku: "kegmhl16", uom: "EACH" },
-        { name: "Keg Miller Lite 1/2 Barrel", sku: "kegml12", uom: "EACH" },
-        { name: "Keg Miller Lite 1/4 Barrel", sku: "kegml14", uom: "EACH" },
-        { name: "Keg Miller Lite 1/6 Barrel", sku: "kegml16", uom: "EACH" },
-        { name: "Keg Rental Deposit", sku: "kegrental", uom: "EACH" },
-        { name: "Lagunitas A Little Sumpin' Sumpin'", sku: "723830014190", uom: "EACH" },
-        { name: "Long  Cranberry 6PK", sku: "130293", uom: "EACH" },
-        { name: "Long  Peach 6PK", sku: "163513", uom: "EACH" },
-        { name: "Long Midnight Sun 8PK", sku: "167282", uom: "EACH" },
-        { name: "Long Original 6PK", sku: "129028", uom: "EACH" },
-        { name: "Long Strong 6PK", sku: "130295", uom: "EACH" },
-        { name: "Long Variety Pack 8PK", sku: "144822", uom: "EACH" },
-        { name: "Long Zero Sugar 6PK", sku: "130296", uom: "EACH" },
-        { name: "Modelo Can 24 FL OZ", sku: "8066095721", uom: "EA" },
-        { name: "Modelo Chelada Fresa Picante", sku: "033544002315", uom: "EACH" },
-        { name: "Plastic Keg Tub", sku: "kegtub", uom: "EACH" },
-        { name: "Red Wine", sku: "9705400233", uom: "EA" },
-        { name: "Robert Mondavi Winery Cabernet Sauvignon", sku: "920634", uom: "EACH" },
-        { name: "Seagram's Escapes Jamaican Me Happy", sku: "070310012512", uom: "EACH" },
-        { name: "Specialty Keg Tap", sku: "speckegtap", uom: "EACH" },
-        { name: "Standard Keg Tap", sku: "stdkegtap", uom: "EACH" },
-        { name: "Tito’s Vodka 750ml ", sku: "920629", uom: "EACH" },
-        { name: "White Wine", sku: "8858600636", uom: "EA" }
-      ] },
-    { id: "Dept_13_Household", name: "13 Household", items: [
-        { name: "365 Cleaner Citrus Scent", sku: "9948248664", uom: "EA" },
-        { name: "365 Snack Bags", sku: "9948246392", uom: "EA" },
-        { name: "Aluminum Foil", sku: "63927771620", uom: "EA" },
-        { name: "Disinfectant", sku: "84960703877", uom: "EA" },
-        { name: "Disinfecting Wipes", sku: "88867018005", uom: "EA" },
-        { name: "Foil Pan", sku: "63927785379", uom: "EA" },
-        { name: "Gain Flings Original Scent, 42 Ct", sku: "3700086749", uom: "EA" },
-        { name: "In-Wash Scent Booster", sku: "88867008082", uom: "EA" },
-        { name: "Lysol Disinfecting Wipes", sku: "1920081145", uom: "EA" },
-        { name: "Tech Wipes Peppermint", sku: "71789710040", uom: "EA" },
-        { name: "Tide Pods", sku: "3700091613", uom: "EA" },
-        { name: "Toilet Paper", sku: "5400010183", uom: "EA" }
-      ] },
-    { id: "Dept_1_Grocery", name: "1 Grocery", items: [
-        { name: "12oz 50 Pack", sku: "12x50Pack", uom: "EACH" },
-        { name: "14oz 50 Pack", sku: "14x50Pack", uom: "EACH" },
-        { name: "16oz 50 Pack", sku: "16x50Pack", uom: "EACH" },
-        { name: "1836 Beef Rub", sku: "85434800629", uom: "EACH" },
-        { name: "20oz 50 Pack", sku: "20x50Pack", uom: "EACH" },
-        { name: "22 lb. bag", sku: "22lbice", uom: "EACH" },
-        { name: "365 Coffee Pleasant Morning Buzz", sku: "9948243520", uom: "EA" },
-        { name: "365 Organic Macaroni and Cheese", sku: "9948249387", uom: "EA" },
-        { name: "Alpen Jodsalz", sku: "10560", uom: "EA" },
-        { name: "Annie's Shells & White Cheddar", sku: "013562000043", uom: "EACH" },
-        { name: "Arizona Green Tea", sku: "61300871526", uom: "EA" },
-        { name: "Barilla Farfalle", sku: "7680850108", uom: "EA" },
-        { name: "Barilla Non-GMO Thin Spaghetti", sku: "7680828009", uom: "EA" },
-        { name: "Bottle Deposit - 6 bottles at 5¢", sku: "1111177790", uom: "EACH" },
-        { name: "Bottled Coke 6-pack", sku: "4900001834", uom: "EA" },
-        { name: "Bread", sku: "7874206797", uom: "EA" },
-        { name: "Bush’s Black Beans", sku: "3940001883", uom: "EA" },
-        { name: "Butter Cookies", sku: "401710011471", uom: "EA" },
-        { name: "Campbell’s HR Cream of Mushroom", sku: "5100006007", uom: "EA" },
-        { name: "Celestial Seasonings Chamomile Herbal Tea", sku: "070734000102", uom: "EACH" },
-        { name: "Chessmen Cookies", sku: "1410007952", uom: "EA" },
-        { name: "Coffee Beans", sku: "79849310320", uom: "EA" },
-        { name: "Coke", sku: "04963406", uom: "EACH" },
-        { name: "Coke 10 pack", sku: "4900006721", uom: "EA" },
-        { name: "Cookie Crisp", sku: "1600027296", uom: "EA" },
-        { name: "Corn Flakes", sku: "81200", uom: "EA" },
-        { name: "Del Monte Cut Green Beans", sku: "2400016286", uom: "EA" },
-        { name: "Del Monte Kernel Corn", sku: "2400056669", uom: "EA" },
-        { name: "Del Monte Sliced Peaches", sku: "2400016719", uom: "EA" },
-        { name: "Dog Treats", sku: "7910052004", uom: "EA" },
-        { name: "Eagle Brand Condensed Milk", sku: "65272910113", uom: "EA" },
-        { name: "Frederik’s MI Cherry Ground Coffee", sku: "76023614994", uom: "EA" },
-        { name: "Frederik’s Mackinac Island Fudge Ground Coffee", sku: "76023615016", uom: "EA" },
-        { name: "French's Classic Yellow Mustard", sku: "4150000700", uom: "EA" },
-        { name: "Fresca", sku: "4900005028", uom: "EA" },
-        { name: "Fresca Grapefruit Citrus 12oz", sku: "4900000248", uom: "EA" },
-        { name: "Froot Loops", sku: "3800028186", uom: "EACH" },
-        { name: "GM Fiber One", sku: "1600040768", uom: "EA" },
-        { name: "Gerber Oatmeal", sku: "1500000702", uom: "EA" },
-        { name: "Hallmark Card", sku: "929962627", uom: "EA" },
-        { name: "Healthy Choice Chicken Noodle Soup", sku: "5010040260", uom: "EA" },
-        { name: "Hibiscus Tea", sku: "2070080014", uom: "EA" },
-        { name: "Honey Maid Graham Crackers", sku: "4400000463", uom: "EA" },
-        { name: "Hot Dog Buns", sku: "7432300228", uom: "EA" },
-        { name: "Hot Dog/Bun Bundle", sku: "1111177701", uom: "EA" },
-        { name: "Hunt’s Petite Diced Tomatoes", sku: "2700037831", uom: "EA" },
-        { name: "Jet-puffed Mashmallows", sku: "60069900328", uom: "EA" },
-        { name: "Kellogg’s Corn Flakes", sku: "3800000120", uom: "EA" },
-        { name: "Kemps Ittibitz", sku: "4148303426", uom: "EA" },
-        { name: "Kraft Mac & Cheese Dinner", sku: "2100065883", uom: "EA" },
-        { name: "Langers Lemonade", sku: "920630", uom: "EACH" },
-        { name: "Lay's Barbecue Chips", sku: "76970", uom: "EACH" },
-        { name: "Luzianne Tea 48 Family Size", sku: "4790030329", uom: "EA" },
-        { name: "Mahatma Long Grain Rice", sku: "1740010550", uom: "EA" },
-        { name: "Mariani Cherries", sku: "7102231553", uom: "EA" },
-        { name: "McCormick Taco Seasoning", sku: "5210003491", uom: "EA" },
-        { name: "Mini Moon Pies", sku: "7210822101", uom: "EA" },
-        { name: "Nature Valley 6 pack", sku: "1600027855", uom: "EA" },
-        { name: "Nature Valley Wafer", sku: "1600014943", uom: "EA" },
-        { name: "Oh Puree! Mashed Potatoes", sku: "029700071479", uom: "EACH" },
-        { name: "Olipop", sku: "850027702872", uom: "EACH" },
-        { name: "Orange Gatorade", sku: "5200033876", uom: "EA" },
-        { name: "Oreo Golden Cookies", sku: "4400003324", uom: "EA" },
-        { name: "PAM Cooking Spray", sku: "6414403031", uom: "EA" },
-        { name: "Parmesan & Romano Cheese", sku: "2100061541", uom: "EA" },
-        { name: "Parmesan Cheese", sku: "2100061531", uom: "EA" },
-        { name: "Pasta", sku: "2920090794", uom: "EA" },
-        { name: "Pirouline Pumpkin Spice Wafers", sku: "4245610787", uom: "EA" },
-        { name: "Pizza Sauce", sku: "74747900061", uom: "EA" },
-        { name: "Potato Salad", sku: "21707600000", uom: "EA" },
-        { name: "RAWCOLOGY Granola Snack Bites Apple Cinnamon", sku: "628504873168", uom: "EACH" },
-        { name: "RAWCOLOGY Granola Snack Bites Berry Burst", sku: "628504873151", uom: "EACH" },
-        { name: "Reusable Bag", sku: "039010277034", uom: "EACH" },
-        { name: "Ritz Crackers", sku: "4400003111", uom: "EACH" },
-        { name: "Ritz Crackers Fresh Stacks", sku: "4400003113", uom: "EA" },
-        { name: "SF Purified Water 16.9 FL OZ 6 pack", sku: "3225142354", uom: "EA" },
-        { name: "Smucker’s Strawberry Jam", sku: "5150001229", uom: "EA" },
-        { name: "Spaghetti Sauce", sku: "3620001375", uom: "EA" },
-        { name: "Spec’s Maple Pecan Pie", sku: "846160", uom: "EACH" },
-        { name: "Tortilla Chips Restaurant Style", sku: "71373346649", uom: "EA" },
-        { name: "Totinos Party Pizza", sku: "4280010800", uom: "EA" },
-        { name: "WF Spinach Feta Orzo Salad", sku: "wfs", uom: "EA" },
-        { name: "Whole Wheat Ritz", sku: "4400004815", uom: "EA" }
-      ] },
-    { id: "Dept_20_Clothing", name: "20 Clothing", items: [
-        { name: "Accessories L/60 Beige", sku: "0470361", uom: "EA" },
-        { name: "Blazer", sku: "77777724051", uom: "EA" },
-        { name: "Blouse S White", sku: "1060060", uom: "EA" },
-        { name: "Champion Boys Socks 12-pack Ankle Socks", sku: "4529908430", uom: "EA" },
-        { name: "Champion C9 Girls 6-pack Ankle Socks", sku: "3825712836", uom: "EA" },
-        { name: "Champion C9 Womens 4-pack Ankle Socks - Black", sku: "3825712956", uom: "EA" },
-        { name: "Champion C9 Womens Cushion Socks 3-pack", sku: "3825709605", uom: "EA" },
-        { name: "Champion Kids Sock Multipacks", sku: "4529905603", uom: "EA" },
-        { name: "Champion Mens 3-pack Extra Low Cut Socks Black", sku: "69655063303", uom: "EA" },
-        { name: "Champion Mens 6-pack Ankle Socks", sku: "3825710096", uom: "EA" },
-        { name: "Champion Unisex Crew Socks 6-pack", sku: "4529908079", uom: "EA" },
-        { name: "Cloud 9 Long Sleeve Girls Nightshirt", sku: "69611428353", uom: "EA" },
-        { name: "Crew Neck", sku: "77777724031", uom: "EA" },
-        { name: "Hair Accessories NOSIZE Red", sku: "0696625", uom: "EA" },
-        { name: "Infant Pinstriped Onesie", sku: "23013037", uom: "EA" },
-        { name: "JF Pocket Square", sku: "4755612134", uom: "EA" },
-        { name: "Joe Boxer Boys Pajama Tank Top & Shorts", sku: "10876", uom: "EA" },
-        { name: "Joe Boxer Mens Black Smiley Face Microfleece Bottoms", sku: "73608083221", uom: "EA" },
-        { name: "Joe Fresh Womens Chemise Nightshirt", sku: "4136061902", uom: "EA" },
-        { name: "Low Cut Navy Socks", sku: "18786390", uom: "EA" },
-        { name: "Luiryare Mens Nightshirt", sku: "77390766752", uom: "EA" },
-        { name: "M Crew Neck Indigo", sku: "700001", uom: "EA" },
-        { name: "M Crew Neck Mountain", sku: "700002", uom: "EA" },
-        { name: "M Crew Neck Red", sku: "700004", uom: "EA" },
-        { name: "M Crew Neck Turquoise", sku: "700003", uom: "EA" },
-        { name: "Men's Crew Neck Black - Large", sku: "19145597925", uom: "EA" },
-        { name: "Men's Crew Neck Black - Medium", sku: "19145597924", uom: "EA" },
-        { name: "Men's Crew Neck Black - Small", sku: "19145597923", uom: "EA" },
-        { name: "Men's Crew Neck Black - XL", sku: "19145597926", uom: "EA" },
-        { name: "Men's Crew Neck Black - XXL", sku: "19145597927", uom: "EA" },
-        { name: "Men's Crew Neck Blue - Large", sku: "19145597930", uom: "EA" },
-        { name: "Men's Crew Neck Blue - Medium", sku: "19145597929", uom: "EA" },
-        { name: "Men's Crew Neck Blue - Small", sku: "19145597928", uom: "EA" },
-        { name: "Men's Crew Neck Blue - XL", sku: "19145597931", uom: "EA" },
-        { name: "Men's Crew Neck Blue - XXL", sku: "19145597932", uom: "EA" },
-        { name: "Men's Crew Neck Boulder - Large", sku: "19145597940", uom: "EA" },
-        { name: "Men's Crew Neck Boulder - Medium", sku: "19145597939", uom: "EA" },
-        { name: "Men's Crew Neck Boulder - Small", sku: "19145597938", uom: "EA" },
-        { name: "Men's Crew Neck Boulder - XL", sku: "19145597941", uom: "EA" },
-        { name: "Men's Crew Neck Boulder - XXL", sku: "19145597942", uom: "EA" },
-        { name: "Men's Crew Neck Grey - Large", sku: "19145597920", uom: "EA" },
-        { name: "Men's Crew Neck Grey - Medium", sku: "19145597919", uom: "EA" },
-        { name: "Men's Crew Neck Grey - Small", sku: "19145597918", uom: "EA" },
-        { name: "Men's Crew Neck Grey - XL", sku: "19145597921", uom: "EA" },
-        { name: "Men's Crew Neck Grey - XXL", sku: "19145597922", uom: "EA" },
-        { name: "Men's Crew Neck Iceberg - Large", sku: "19145597943", uom: "EA" },
-        { name: "Men's Crew Neck Iceberg - Medium", sku: "19145597944", uom: "EA" },
-        { name: "Men's Crew Neck Iceberg - XL", sku: "19145597946", uom: "EA" },
-        { name: "Men's Crew Neck Iceberg - XXL", sku: "19145597947", uom: "EA" },
-        { name: "Men's Crew Neck Red - Large", sku: "19145597935", uom: "EA" },
-        { name: "Men's Crew Neck Red - Medium", sku: "19145597934", uom: "EA" },
-        { name: "Men's Crew Neck Red - Small", sku: "19145597933", uom: "EA" },
-        { name: "Men's Crew Neck Red - XL", sku: "19145597936", uom: "EA" },
-        { name: "Men's Crew Neck Red - XXL", sku: "19145597937", uom: "EA" },
-        { name: "Muk Luks Womens Floral Nightshirt", sku: "88983518201", uom: "EA" },
-        { name: "NCAA Navy T-shirt", sku: "27145033", uom: "EA" },
-        { name: "Nike WM Court Legacy Black/White-Platinum", sku: "19450224201", uom: "EA" },
-        { name: "Noble Mount Mens Flannel Nightshirt", sku: "71580289038", uom: "EA" },
-        { name: "Outerwear M Black", sku: "0995203", uom: "EA" },
-        { name: "Pacific End on End Cotton Nightshirt", sku: "06609", uom: "EA" },
-        { name: "Ron Jon Black Trucker Cap", sku: "cap", uom: "EA" },
-        { name: "Satin Skirt", sku: "77777724071", uom: "EA" },
-        { name: "Selvedge Denim", sku: "77777724021", uom: "EA" },
-        { name: "Socks Bin 10-11 Red", sku: "1037466", uom: "EA" },
-        { name: "Suede Blazer", sku: "77777724011", uom: "EA" },
-        { name: "Toshiba ELERA Socks", sku: "77777723012", uom: "EA" },
-        { name: "Toshiba Golf Polo (Large)", sku: "66600314286", uom: "EA" },
-        { name: "Toshiba Golf Polo (XXL)", sku: "66600314288", uom: "EA" },
-        { name: "Toshiba Men Polo Red - Large", sku: "77777723003", uom: "EA" },
-        { name: "Toshiba Men Polo Red - Medium", sku: "77777723002", uom: "EA" },
-        { name: "Toshiba Men Polo Red - Small", sku: "77777723001", uom: "EA" },
-        { name: "Toshiba Men Polo Red - XL", sku: "77777723004", uom: "EA" },
-        { name: "Toshiba Men Polo Red - XXL", sku: "77777723005", uom: "EA" },
-        { name: "Toshiba Men Polo Tidal Blue - Large", sku: "19523801563", uom: "EA" },
-        { name: "Toshiba Men Polo Tidal Blue - Medium", sku: "19523801562", uom: "EA" },
-        { name: "Toshiba Men Polo Tidal Blue - Small", sku: "19523801561", uom: "EA" },
-        { name: "Toshiba Men Polo Tidal Blue - XL", sku: "19523801564", uom: "EA" },
-        { name: "Toshiba Men Polo Tidal Blue - XXL", sku: "19523801565", uom: "EA" },
-        { name: "Toshiba Red Socks", sku: "77777723015", uom: "EA" },
-        { name: "Toshiba Retail Socks", sku: "77777723014", uom: "EA" },
-        { name: "Toshiba Tools Socks", sku: "77777723011", uom: "EA" },
-        { name: "Toshiba Women Polo Red - Large", sku: "77777723008", uom: "EA" },
-        { name: "Toshiba Women Polo Red - Medium", sku: "77777723007", uom: "EA" },
-        { name: "Toshiba Women Polo Red - Small", sku: "77777723006", uom: "EA" },
-        { name: "Toshiba Women Polo Red - XL", sku: "77777723009", uom: "EA" },
-        { name: "Toshiba Women Polo Red - XXL", sku: "77777723010", uom: "EA" },
-        { name: "Toshiba Women Polo Tidal Blue - Large", sku: "19523801617", uom: "EA" },
-        { name: "Toshiba Women Polo Tidal Blue - Medium", sku: "19523801616", uom: "EA" },
-        { name: "Toshiba Women Polo Tidal Blue - Small", sku: "19523801615", uom: "EA" },
-        { name: "Toshiba Women Polo Tidal Blue - XL", sku: "19523801618", uom: "EA" },
-        { name: "Toshiba Women Polo Tidal Blue - XXL", sku: "19523801619", uom: "EA" },
-        { name: "Toshiba XCS Socks", sku: "77777723013", uom: "EA" },
-        { name: "Unisex Starter Toronto Maple Leafs Team Color Two-Stripe Crew Socks", sku: "19608237272", uom: "EACH" },
-        { name: "Women's Polo Blue - Large", sku: "88653515764", uom: "EA" },
-        { name: "Women's Polo Blue - Medium", sku: "88653515763", uom: "EA" },
-        { name: "Women's Polo Blue - Small", sku: "88653515762", uom: "EA" },
-        { name: "Women's Polo Blue - XL", sku: "88653515765", uom: "EA" },
-        { name: "Women's Polo Blue - XXL", sku: "88653515766", uom: "EA" },
-        { name: "Women's Polo Green - Large", sku: "88653515759", uom: "EA" },
-        { name: "Women's Polo Green - Medium", sku: "88653515758", uom: "EA" },
-        { name: "Women's Polo Green - Small", sku: "88653515757", uom: "EA" },
-        { name: "Women's Polo Green - XL", sku: "88653515760", uom: "EA" },
-        { name: "Women's Polo Green - XXL", sku: "88653515761", uom: "EA" },
-        { name: "Women's Polo Orange - Large", sku: "88653515769", uom: "EA" },
-        { name: "Women's Polo Orange - Medium", sku: "88653515768", uom: "EA" },
-        { name: "Women's Polo Orange - Small", sku: "88653515767", uom: "EA" },
-        { name: "Women's Polo Orange - XL", sku: "88653515770", uom: "EA" },
-        { name: "Women's Polo Orange - XXL", sku: "88653515771", uom: "EA" },
-        { name: "Womens Bermuda Shorts Black", sku: "700051", uom: "EA" },
-        { name: "Womens Bermuda Shorts Navy", sku: "700054", uom: "EA" },
-        { name: "Womens Bermuda Shorts Red", sku: "700052", uom: "EA" },
-        { name: "Womens Bermuda Shorts White", sku: "700053", uom: "EA" },
-        { name: "Womens Long Henley Nightshirt - Green", sku: "873395273", uom: "EA" }
-      ] },
-    { id: "Dept_21_Sport", name: "21 Sport", items: [
-        { name: "Backpacker Small Compression Sack", sku: "43702", uom: "EA" },
-        { name: "Bicycle LED Light Set", sku: "66349300326", uom: "EA" },
-        { name: "Wilson A1010 HS1 Baseball", sku: "2638828770", uom: "EA" }
-      ] },
-    { id: "Dept_22_Tools", name: "22 Tools", items: [
-        { name: "Basic Stud Finder", sku: "70535", uom: "EA" },
-        { name: "Magnetic Pocket Level", sku: "64882475629", uom: "EA" },
-        { name: "Pigskin Leather Work Gloves", sku: "30026", uom: "EA" },
-        { name: "Pistol-grip Blow Gun", sku: "82009", uom: "EA" }
-      ] },
-    { id: "Dept_23_Toys", name: "23 Toys", items: [
-        { name: "", sku: "62755519833", uom: "EA" }
-      ] },
-    { id: "Dept_24_Yard", name: "24 Yard", items: [
-        { name: "Bale of Hay", sku: "6421", uom: "EA" },
-        { name: "Charcoal", sku: "6456", uom: "EA" },
-        { name: "Gravel", sku: "6585", uom: "EA" },
-        { name: "Grill", sku: "6085", uom: "EA" },
-        { name: "Ladder", sku: "6473", uom: "EA" },
-        { name: "Leaf Bags", sku: "6797", uom: "EA" },
-        { name: "Mulch", sku: "6711", uom: "EA" },
-        { name: "Penn Smart Patch 10lb Tall Fescue", sku: "2149602410", uom: "EACH" },
-        { name: "Pine Straw", sku: "6422", uom: "EA" },
-        { name: "Propane Refill", sku: "6985", uom: "EA" },
-        { name: "Propane Tank", sku: "6498", uom: "EA" },
-        { name: "Stone", sku: "6614", uom: "EA" },
-        { name: "Wheel Barrow", sku: "6013", uom: "EA" },
-        { name: "Wood Chips", sku: "6955", uom: "EA" }
-      ] },
-    { id: "Dept_25_Electronics", name: "25 Electronics", items: [
-        { name: "7ft Ethernet Cat6 Purple", sku: "3722971587", uom: "EA" },
-        { name: "APC Surge Protector", sku: "73130433602", uom: "EA" },
-        { name: "AirPods Max", sku: "19425224503", uom: "EA" },
-        { name: "Bluetooth Speaker", sku: "77777724001", uom: "EA" },
-        { name: "Boltune Earbuds", sku: "eb", uom: "EA" },
-        { name: "HS1 Bone Conduction Headphones", sku: "bc", uom: "EA" },
-        { name: "OREI 4X4 HDMI Matrix Switch/Splitter", sku: "85000895673", uom: "EA" },
-        { name: "Soundcore Earbuds", sku: "eb2", uom: "EA" },
-        { name: "USB 2.0 8GB Flash Drive", sku: "2226534740", uom: "EA" },
-        { name: "Youth Whisper Bone Conduction Headphones", sku: "bc2", uom: "EA" }
-      ] },
-    { id: "Dept_26_Automotive", name: "26 Automotive", items: [
-        { name: "Antifreeze/Coolant Tester", sku: "81739901498", uom: "EA" },
-        { name: "Battery Hydrometer", sku: "30369", uom: "EA" },
-        { name: "Marine Lower Pump Unit", sku: "64882483050", uom: "EA" }
-      ] },
-    { id: "Dept_2A_QtyRequired", name: "2A QtyRequired", items: [
-        { name: "Blood Orange", sku: "4381", uom: "EA" },
-        { name: "Cara Cara Orange", sku: "3110", uom: "EA" },
-        { name: "Garlic", sku: "4608", uom: "EA" },
-        { name: "Hass Avocado", sku: "4046", uom: "EA" },
-        { name: "Lemons", sku: "4033", uom: "EACH" },
-        { name: "Lime", sku: "4048", uom: "EA" },
-        { name: "Midknight Orange", sku: "3036", uom: "EA" },
-        { name: "Minneola Tangelo", sku: "4383", uom: "EA" },
-        { name: "Navel Orange", sku: "3107", uom: "EA" },
-        { name: "Red Grapefruit", sku: "4289", uom: "EA" },
-        { name: "Valencia Orange", sku: "3108", uom: "EA" },
-        { name: "White GrapeFruit", sku: "4294", uom: "EA" }
-      ] },
-    { id: "Dept_2B_Weighed", name: "2B Weighed", items: [
-        { name: "Acorn Squash", sku: "4750", uom: "LB" },
-        { name: "Armenian Cucumber", sku: "4592", uom: "LB" },
-        { name: "Baby Eggplant", sku: "4599", uom: "LB" },
-        { name: "Baby Summer Squash", sku: "4755", uom: "LB" },
-        { name: "Baby Zucchini Squash", sku: "4756", uom: "LB" },
-        { name: "Banana", sku: "4011", uom: "LB" },
-        { name: "Banana Pepper", sku: "4678", uom: "LB" },
-        { name: "Beefsteak Tomato", sku: "3061", uom: "LB" },
-        { name: "Broccoli", sku: "4060", uom: "LB" },
-        { name: "Brussel Sprouts", sku: "4550", uom: "LB" },
-        { name: "Butternut Squash", sku: "4759", uom: "LB" },
-        { name: "Cauliflower", sku: "4079", uom: "LB" },
-        { name: "Cortland Apple", sku: "4106", uom: "LB" },
-        { name: "Cucumber", sku: "4062", uom: "LB" },
-        { name: "Delicata Squash", sku: "4763", uom: "LB" },
-        { name: "Eggplant", sku: "4081", uom: "LB" },
-        { name: "Empire Apple", sku: "4126", uom: "LB" },
-        { name: "English Cucumber", sku: "4593", uom: "LB" },
-        { name: "Fennel", sku: "4515", uom: "LB" },
-        { name: "Fuji Apple", sku: "4131", uom: "LB" },
-        { name: "Gala Apple", sku: "4134", uom: "LB" },
-        { name: "Golden Delicious Apple", sku: "4137", uom: "LB" },
-        { name: "Granny Smith Apple", sku: "4018", uom: "LB" },
-        { name: "Green Asparagus", sku: "4080", uom: "LB" },
-        { name: "Green Beans", sku: "4066", uom: "LB" },
-        { name: "Green Bell Pepper", sku: "4065", uom: "LB" },
-        { name: "Home Grown Tomato", sku: "4800", uom: "LB" },
-        { name: "Honeycrisp Apple", sku: "3283", uom: "LB" },
-        { name: "Jalapeno Pepper", sku: "4693", uom: "LB" },
-        { name: "Kale", sku: "4627", uom: "LB" },
-        { name: "Leeks", sku: "4629", uom: "LB" },
-        { name: "Minneiska Apple", sku: "3603", uom: "LB" },
-        { name: "Napa Cabbage", sku: "4552", uom: "LB" },
-        { name: "Orange Bell Pepper", sku: "4682", uom: "LB" },
-        { name: "Pasilla Pepper", sku: "4702", uom: "LB" },
-        { name: "Pinklady Apple", sku: "4130", uom: "LB" },
-        { name: "Plum Tomato", sku: "4087", uom: "LB" },
-        { name: "Poblano Pepper", sku: "4705", uom: "LB" },
-        { name: "Purple Top Turnip", sku: "4811", uom: "LB" },
-        { name: "Radishes", sku: "4089", uom: "LB" },
-        { name: "Red Bell Pepper", sku: "4088", uom: "LB" },
-        { name: "Red Cabbage", sku: "4554", uom: "LB" },
-        { name: "Red Delicious Apple", sku: "4167", uom: "LB" },
-        { name: "Red Jalapeno Pepper", sku: "4694", uom: "LB" },
-        { name: "Red Tomato", sku: "4063", uom: "LB" },
-        { name: "Serrano Pepper", sku: "4709", uom: "LB" },
-        { name: "Snapdragon Apple", sku: "3442", uom: "LB" },
-        { name: "Spaghetti Squash", sku: "4776", uom: "LB" },
-        { name: "Spartan Apple", sku: "4179", uom: "LB" },
-        { name: "Sugar Bee Apple", sku: "3486", uom: "LB" },
-        { name: "Sweet Potato", sku: "4074", uom: "LB" },
-        { name: "Sweet Potatoes", sku: "4816", uom: "LB" },
-        { name: "Test_Weighted_Organic", sku: "99999", uom: "LB" },
-        { name: "Tets Weighted Item", sku: "9999", uom: "LB" },
-        { name: "Tomatoes on the Vine", sku: "4664", uom: "LB" },
-        { name: "Yellow Bell Pepper", sku: "4680", uom: "LB" },
-        { name: "Yellow Squash", sku: "4766", uom: "LB" },
-        { name: "Yukon Gold Potato", sku: "4727", uom: "LB" },
-        { name: "Zucchini Squash", sku: "4067", uom: "LB" }
-      ] },
-    { id: "Dept_2_Produce", name: "2 Produce", items: [
-        { name: "Cantaloupe", sku: "4050", uom: "EA" },
-        { name: "Celery", sku: "4070", uom: "EA" },
-        { name: "Cilantro", sku: "4889", uom: "EA" },
-        { name: "Dill Weed", sku: "4891", uom: "EA" },
-        { name: "Green Avocado", sku: "4221", uom: "EA" },
-        { name: "Green Cabbage", sku: "4069", uom: "EA" },
-        { name: "Green Scallion", sku: "4068", uom: "EA" },
-        { name: "Honeydew Melon", sku: "4034", uom: "EA" },
-        { name: "Italian Parsley", sku: "4901", uom: "EA" },
-        { name: "Parsley", sku: "4899", uom: "EA" },
-        { name: "Pineapple", sku: "4431", uom: "EA" },
-        { name: "Pomegranate", sku: "3127", uom: "EA" },
-        { name: "Watermelon", sku: "4031", uom: "EA" }
-      ] },
-    { id: "Dept_30_Deposit", name: "30 Deposit", items: [
-        { name: "Bottle Deposit Return", sku: "1111177791", uom: "EACH" }
-      ] },
-    { id: "Dept_31_USPS", name: "31 USPS", items: [
-        { name: "Book of stamps", sku: "720005", uom: "EA" },
-        { name: "USPS Large box", sku: "720004", uom: "EA" },
-        { name: "USPS Medium box", sku: "720003", uom: "EA" },
-        { name: "USPS Priority Mail", sku: "720000", uom: "EA" },
-        { name: "USPS Priority Mail Express", sku: "720001", uom: "EA" },
-        { name: "USPS Small box", sku: "720002", uom: "EA" }
-      ] },
-    { id: "Dept_32_Misc", name: "32 Misc", items: [
-        { name: "$25 Gift Card", sku: "07675004690", uom: "EA" },
-        { name: "10 LB Bag Ice", sku: "6185", uom: "EA" },
-        { name: "20 LB Bag Ice", sku: "6657", uom: "EA" },
-        { name: "5 LB Bag Ice", sku: "6138", uom: "EA" },
-        { name: "Charity Donation", sku: "9991", uom: "EA" },
-        { name: "Christmas Tree", sku: "6457", uom: "EA" },
-        { name: "Christmas Tree", sku: "72001", uom: "EA" },
-        { name: "Default Template Item", sku: "DEFAULT_TEMPLATE_ITEM", uom: "EA" },
-        { name: "Food Donation", sku: "1111177702", uom: "EACH" },
-        { name: "Freshman Starter Loyalty Program", sku: "8883", uom: "EA" },
-        { name: "GS1 Digital Link Item", sku: "12340123456789", uom: "EACH" },
-        { name: "Gorilla Clear Glue", sku: "5242700546", uom: "EACH" },
-        { name: "Helium Balloons", sku: "1111177700", uom: "EA" },
-        { name: "Inner Circle Membership", sku: "8881", uom: "EA" },
-        { name: "Perks Rewards Membership", sku: "8882", uom: "EA" },
-        { name: "Poinsettias", sku: "6004", uom: "EA" },
-        { name: "TSC Reusable Bag", sku: "84898403343", uom: "EACH" }
-      ] },
-    { id: "Dept_3_Dairy", name: "3 Dairy", items: [
-        { name: "Borden Milk", sku: "1400000104", uom: "EA" },
-        { name: "Free Range Eggs", sku: "1", uom: "EA" }
-      ] },
-    { id: "Dept_40_Jewelry", name: "40 Jewelry", items: [
-        { name: "18\" Freshwater Cultured Pearl Strand with 14K Yellow Gold Clasp", sku: "72521307545", uom: "EA" },
-        { name: "3-Piece Created Opal Stud Earring Set in Sterling Silver", sku: "72522287688", uom: "EA" },
-        { name: "40mm Ladies' Bulova Rubaiyat Watch with a White Dial and Silver-tone Bracelet", sku: "72522489359", uom: "EA" },
-        { name: "8-in Adjustable Fashion Bangle Bracelet by Rembrandt in Sterling Silver", sku: "72521976463", uom: "EA" },
-        { name: "Gold Chain", sku: "77777724003", uom: "EA" },
-        { name: "Rose Gold Earrings", sku: "77777724043", uom: "EA" }
-      ] },
-    { id: "Dept_41_Fragrance", name: "41 Fragrance", items: [
-        { name: "Cologne", sku: "77777724002", uom: "EA" }
-      ] },
-    { id: "Dept_42_Handbags", name: "42 Handbags", items: [
-        { name: "Leather Bag", sku: "77777724042", uom: "EA" },
-        { name: "Postina Small Leather Bag", sku: "50370", uom: "EA" }
-      ] },
-    { id: "Dept_43_Shoes", name: "43 Shoes", items: [
-        { name: "Suede Flats", sku: "77777724061", uom: "EA" }
-      ] },
-    { id: "Dept_4_Meat", name: "4 Meat", items: [
-        { name: "Hot Dogs", sku: "78391908512", uom: "EA" },
-        { name: "Whole Turkey", sku: "85240900736", uom: "EA" }
-      ] },
-    { id: "Dept_50_Pharmacy", name: "50 Pharmacy", items: [
-        { name: "Pharmacy Item", sku: "rx", uom: "EACH" },
-        { name: "rx Item mock", sku: "4700000020000062000125", uom: "EACH" }
-      ] },
     { id: "Dept_5_Candy", name: "5 Candy", items: [
         { name: "Almond Joy", sku: "3400000320", uom: "EA" },
-        { name: "Almond Joy King Size", sku: "3400000522", uom: "EA" },
-        { name: "BreathSavers Peppermint", sku: "44810", uom: "EA" },
-        { name: "BreathSavers Spearmint", sku: "3400000337", uom: "EA" },
-        { name: "Feastables MrBeast Dark Chocolate", sku: "85002788000", uom: "EA" },
-        { name: "Heath Bar", sku: "1070006080", uom: "EA" },
-        { name: "Hershey's Almond Chocolate Bar 6 pack", sku: "3400029105", uom: "EA" },
-        { name: "Hershey's Milk Chocolate Bar 6 pack", sku: "3400029005", uom: "EA" },
-        { name: "Hershey’s Chocolate Almond", sku: "42410", uom: "EA" },
-        { name: "Hershey’s Cookies ‘n’ Cream", sku: "42390", uom: "EA" },
-        { name: "Hershey’s King Milk Chocolate", sku: "3400000220", uom: "EA" },
-        { name: "Hershey’s King Size Chocolate Almond Bar", sku: "3400000241", uom: "EA" },
-        { name: "Hershey’s Milk Chocolate Bar", sku: "3400000240", uom: "EA" },
-        { name: "Ice Breakers Cool Mint", sku: "3400000007", uom: "EA" },
-        { name: "Ice Breakers Duo Raspberry", sku: "46660", uom: "EA" },
-        { name: "Ice Breakers Duo Strawberry", sku: "3400000665", uom: "EA" },
-        { name: "Ice Breakers Sours", sku: "3400000098", uom: "EA" },
-        { name: "Ice Breakers Spearmint", sku: "3400000006", uom: "EA" },
-        { name: "Ice Breakers Wintergreen", sku: "3400000009", uom: "EA" },
-        { name: "Ice Cubes Artic Grape", sku: "3400000545", uom: "EA" },
-        { name: "Ice Cubes Cinnamon", sku: "3400000811", uom: "EA" },
-        { name: "Ice Cubes Peppermint Gum", sku: "3400000843", uom: "EA" },
-        { name: "Ice Cubes Raspberry Sorbet", sku: "3400000848", uom: "EA" },
-        { name: "Ice Cubes Spearmint Gum", sku: "3400000847", uom: "EA" },
-        { name: "Ice Cubes Wintergreen", sku: "3400000529", uom: "EA" },
+        { name: "Hershey's Milk Chocolate Bar", sku: "3400000240", uom: "EA" },
         { name: "KitKat", sku: "3400000246", uom: "EA" },
-        { name: "KitKat Duos", sku: "3400031828", uom: "EA" },
-        { name: "KitKat King Size", sku: "3400000229", uom: "EA" },
         { name: "M&Ms", sku: "4000000031", uom: "EACH" },
-        { name: "Mounds Bar", sku: "3400000031", uom: "EA" },
-        { name: "PayDay Bar", sku: "1070080722", uom: "EA" },
-        { name: "PayDay King Size", sku: "1070080727", uom: "EA" },
-        { name: "PayDayDataMatrix", sku: "00010700807229", uom: "EACH" },
-        { name: "Peanut M&Ms", sku: "4000000032", uom: "EACH" },
-        { name: "Peppermint Altoids", sku: "2200015933", uom: "EA" },
-        { name: "Pocky Chocolate", sku: "7314115233", uom: "EA" },
-        { name: "Pocky Chocolate", sku: "7314111081", uom: "EA" },
-        { name: "Reese's Peanut Butter Cups - 2", sku: "3400000440", uom: "EA" },
-        { name: "Reese’s Peanut Butter Cups - 4", sku: "3400000480", uom: "EA" },
-        { name: "Reese’s Sticks", sku: "340000014", uom: "EA" },
-        { name: "Rolo", sku: "3400000244", uom: "EA" },
-        { name: "Sour Patch Kids", sku: "UG20252", uom: "EACH" },
-        { name: "Trident Island Berry Lime", sku: "07339005525", uom: "EACH" },
-        { name: "Trident Tropical Twist", sku: "UG20253", uom: "EACH" },
-        { name: "Trident Watermelon Twist", sku: "07339005518", uom: "EACH" },
-        { name: "Twix", sku: "UG20251", uom: "EACH" },
-        { name: "Twizzlers", sku: "3400053104", uom: "EA" },
-        { name: "Whitman's Sampler", sku: "7674007012", uom: "EA" },
-        { name: "York Peppermint Patty", sku: "3400000330", uom: "EA" }
-      ] },
-    { id: "Dept_60_Tobacco", name: "60 Tobacco", items: [
-        { name: "Nicorette Gum", sku: "30766776054", uom: "EACH" }
+        { name: "Reese's Peanut Butter Cups", sku: "3400000440", uom: "EA" },
+        { name: "Snickers", sku: "4000000021", uom: "EA" }
       ] },
     { id: "Dept_6_Snacks", name: "6 Snacks", items: [
-        { name: "Almonds", sku: "4902204244", uom: "EA" },
         { name: "Cheetos", sku: "28400040112", uom: "EACH" },
-        { name: "Cherry Slices", sku: "9843724507", uom: "EACH" },
         { name: "Doritos", sku: "2840009089", uom: "EACH" },
-        { name: "Honey Roasted Cashews", sku: "9843724196", uom: "EACH" },
-        { name: "Jack Links Beef Jerky Sweet & Hot", sku: "1708287633", uom: "EA" },
-        { name: "Jack Links Beef Jerky Teriyaki", sku: "1708287635", uom: "EA" },
-        { name: "Jalapeno Peanuts", sku: "9843721025", uom: "EACH" },
-        { name: "Orville Redenbacher’s Mini Bags", sku: "2700062317", uom: "EA" },
-        { name: "Planters Mixed Nuts", sku: "2900001665", uom: "EA" },
-        { name: "Pringles Lightly Salted", sku: "3800013881", uom: "EA" },
         { name: "Pringles Original", sku: "3800013841", uom: "EA" },
-        { name: "Protein Trail Mix", sku: "4902265916", uom: "EA" },
-        { name: "Quaker Chewy Chocolate Chip", sku: "0307750", uom: "EACH" },
-        { name: "Quaker ChewyPB Chip", sku: "0307760", uom: "EACH" },
-        { name: "Sahale ", sku: "89386900032", uom: "EA" },
-        { name: "Sahale Maple Pecans", sku: "89386900033", uom: "EA" },
-        { name: "SmartFood Popcorn", sku: "2840031413", uom: "EA" },
-        { name: "Smartfood Popcorn", sku: "2840001423", uom: "EACH" },
-        { name: "Stax Buffalo Wings", sku: "2840009251", uom: "EA" },
-        { name: "Stax Flaming Hot", sku: "2840059670", uom: "EA" },
-        { name: "Sun Chips Minis Garden Salsa", sku: "2840070014", uom: "EA" },
-        { name: "Sunflower Kernels", sku: "4902204239", uom: "EA" },
-        { name: "Unsalted Mixed Nuts", sku: "88867012670", uom: "EA" },
-        { name: "Watermelon Rings", sku: "9843724511", uom: "EACH" },
-        { name: "Whole Cashews", sku: "4902204260", uom: "EA" }
+        { name: "SmartFood Popcorn", sku: "2840031413", uom: "EA" }
       ] },
-    { id: "Dept_7_Deli", name: "7 Deli", items: [
-        { name: "1 lb Deli Ham", sku: "905001", uom: "EA" },
-        { name: "1 lb Deli Roast Beef", sku: "905002", uom: "EA" },
-        { name: "1 lb Deli Swiss Cheese", sku: "905003", uom: "EA" },
-        { name: "1 lb Deli Turkey", sku: "905000", uom: "EA" },
-        { name: "1 lb Deli White Cheddar Cheese", sku: "905005", uom: "EA" },
-        { name: "Apple Slices", sku: "7015", uom: "EACH" },
-        { name: "Baby Carrots", sku: "7012", uom: "EACH" },
-        { name: "Caesar Salad", sku: "7014", uom: "EACH" },
-        { name: "California Bowl", sku: "7013", uom: "EACH" },
-        { name: "Chicken Panini", sku: "7004", uom: "EACH" },
-        { name: "Chips", sku: "7011", uom: "EACH" },
-        { name: "Deli Cheddar Cheese", sku: "905004", uom: "LB" },
-        { name: "French Bread", sku: "906000", uom: "EA" },
-        { name: "Fries", sku: "7010", uom: "EACH" },
-        { name: "Greek Salad", sku: "7008", uom: "EACH" },
-        { name: "Grilled Cheese", sku: "7009", uom: "EACH" },
-        { name: "Ham Sandwich", sku: "7007", uom: "EACH" },
-        { name: "Ham Sandwich - Eat In", sku: "907001", uom: "EA" },
-        { name: "Ham Sandwich - Optional", sku: "907002", uom: "EA" },
-        { name: "Ham Sandwich - Take Out", sku: "907000", uom: "EA" },
-        { name: "Kale Salad", sku: "7006", uom: "EACH" },
-        { name: "Onion Rings", sku: "7005", uom: "EACH" },
-        { name: "PB&J", sku: "7003", uom: "EACH" },
-        { name: "Power Bowl", sku: "7002", uom: "EACH" },
-        { name: "Turkey on Wheat", sku: "7001", uom: "EACH" }
+    { id: "Dept_2B_Weighed", name: "2B Weighed Produce", items: [
+        { name: "Banana", sku: "4011", uom: "LB" },
+        { name: "Broccoli", sku: "4060", uom: "LB" },
+        { name: "Fuji Apple", sku: "4131", uom: "LB" },
+        { name: "Granny Smith Apple", sku: "4018", uom: "LB" }
       ] },
-    { id: "Dept_8_Floral", name: "8 Floral", items: [
-        { name: "Daisy Bunch", sku: "7948784013", uom: "EA" },
-        { name: "Green Mini Pumpkin", sku: "70801685047", uom: "EA" },
-        { name: "Medium Orange Pumpkin", sku: "19151827369", uom: "EA" },
-        { name: "Medium White Pumpkin", sku: "19151827370", uom: "EA" },
-        { name: "Mini Galvanized French Bucket", sku: "19515852666", uom: "EA" },
-        { name: "Orange Speckle Mini Pumpkin", sku: "70801685251", uom: "EA" },
-        { name: "Orange Sunflowers", sku: "19515891472", uom: "EA" },
-        { name: "Small Black Pumpkin", sku: "19151827367", uom: "EA" },
-        { name: "Sunflowers", sku: "19515891362", uom: "EA" },
-        { name: "Yellow Daisies", sku: "19515891573", uom: "EA" }
-      ] },
-
-    { id: "NO_TAX", name: "NO TAX", items: [
-        { name: "Water", sku: "082657500690", uom: "EACH" }
-      ] },
-    { id: "VAT_TAX", name: "VAT TAX", items: [
-        { name: "Kong HandiPOD Mini Starter Kit", sku: "035585800219", uom: "EACH" },
-        { name: "McVities Digestives ChocTopsMilkChoc100g", sku: "5000168010311", uom: "EACH" },
-        { name: "Oscar Orsen Elastic Thin Lrge Brown 30pk", sku: "1845678901001", uom: "EACH" }
+    { id: "Dept_2A_QtyRequired", name: "2A Qty Required", items: [
+        { name: "Lemons", sku: "4033", uom: "EACH" },
+        { name: "Lime", sku: "4048", uom: "EA" },
+        { name: "Hass Avocado", sku: "4046", uom: "EA" }
       ] }
   ]
 };
 
 const typeColors = {
-  'AMOUNT_OFF': 'bg-green-100 text-green-800',
-  'PERCENT_OFF': 'bg-blue-100 text-blue-800',
-  'PERCENT_OFF / FINAL_PRICE': 'bg-purple-100 text-purple-800',
-  'POINTS': 'bg-yellow-100 text-yellow-800',
-  'QTY_REQUIRED': 'bg-orange-100 text-orange-800',
-  'CONTINUITY / FREE_ITEM': 'bg-pink-100 text-pink-800',
-  'BUNDLE_PRICE': 'bg-indigo-100 text-indigo-800',
-  'FINAL_PRICE': 'bg-red-100 text-red-800'
+  'AMOUNT_OFF': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+  'PERCENT_OFF': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+  'PERCENT_OFF / FINAL_PRICE': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+  'POINTS': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+  'QTY_REQUIRED': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+  'CONTINUITY / FREE_ITEM': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300',
+  'BUNDLE_PRICE': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
+  'FINAL_PRICE': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+};
+
+// Add Item Modal Component
+const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    sku: '',
+    uom: 'EA',
+    department: 'Custom_Items'
+  });
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (editItem) {
+      setFormData({
+        name: editItem.name,
+        sku: editItem.sku,
+        uom: editItem.uom,
+        department: editItem.department || 'Custom_Items'
+      });
+    } else {
+      setFormData({ name: '', sku: '', uom: 'EA', department: 'Custom_Items' });
+    }
+    setErrors({});
+  }, [editItem, isOpen]);
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.name.trim()) newErrors.name = 'Item name is required';
+    if (!formData.sku.trim()) newErrors.sku = 'SKU is required';
+    if (formData.sku.length > 20) newErrors.sku = 'SKU must be 20 characters or less';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validate()) {
+      onSave({
+        ...formData,
+        id: editItem?.id || Date.now().toString()
+      });
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white">
+            {editItem ? 'Edit Item' : 'Add New Item'}
+          </h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer text-xl">×</button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Item Name *</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white ${errors.name ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}
+              placeholder="e.g., Organic Milk"
+            />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">SKU / Barcode *</label>
+            <input
+              type="text"
+              value={formData.sku}
+              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono ${errors.sku ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}
+              placeholder="e.g., 123456789012"
+            />
+            {errors.sku && <p className="text-red-500 text-xs mt-1">{errors.sku}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Unit of Measure</label>
+              <select
+                value={formData.uom}
+                onChange={(e) => setFormData({ ...formData, uom: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+              >
+                <option value="EA">EA (Each)</option>
+                <option value="EACH">EACH</option>
+                <option value="LB">LB (Pound)</option>
+                <option value="KG">KG (Kilogram)</option>
+                <option value="OZ">OZ (Ounce)</option>
+                <option value="GAL">GAL (Gallon)</option>
+                <option value="PK">PK (Pack)</option>
+                <option value="CS">CS (Case)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department</label>
+              <select
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+              >
+                <option value="Custom_Items">Custom Items</option>
+                {departments.map(dept => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition cursor-pointer"
+            >
+              {editItem ? 'Save Changes' : 'Add Item'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Delete Confirmation Modal
+const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, itemName }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm p-6">
+        <div className="text-center">
+          <div className="text-4xl mb-4">🗑️</div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Delete Item?</h3>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">
+            Are you sure you want to delete "<strong>{itemName}</strong>"? This action cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition cursor-pointer"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // Login Component
@@ -1061,26 +647,26 @@ const Login = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-800">TOSHIBA</h1>
-          <p className="text-sm text-slate-500 tracking-widest">GLOBAL COMMERCE SOLUTIONS</p>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-white">TOSHIBA</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 tracking-widest">GLOBAL COMMERCE SOLUTIONS</p>
           <div className="mt-4 h-1 w-20 bg-red-600 mx-auto rounded"></div>
-          <h2 className="mt-4 text-xl font-semibold text-slate-700">ELERA Scanbook Portal</h2>
+          <h2 className="mt-4 text-xl font-semibold text-slate-700 dark:text-slate-200">ELERA Scanbook Portal</h2>
         </div>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={handleKeyDown} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" placeholder="Enter username" />
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
+            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={handleKeyDown} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white dark:bg-slate-700 text-slate-900 dark:text-white" placeholder="Enter username" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={handleKeyDown} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" placeholder="Enter password" />
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={handleKeyDown} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white dark:bg-slate-700 text-slate-900 dark:text-white" placeholder="Enter password" />
           </div>
-          {error && <p className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">{error}</p>}
+          {error && <p className="text-red-600 text-sm bg-red-50 dark:bg-red-900/30 p-3 rounded-lg">{error}</p>}
           <button type="button" onClick={handleLogin} className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition duration-200 cursor-pointer">Sign In</button>
         </div>
-        <p className="mt-6 text-center text-xs text-slate-400">Version 2.0 • United States Edition 2026</p>
+        <p className="mt-6 text-center text-xs text-slate-400">Version 2.1 • United States Edition 2026</p>
       </div>
     </div>
   );
@@ -1088,15 +674,15 @@ const Login = ({ onLogin }) => {
 
 // Category Card Component
 const CategoryCard = ({ title, icon, description, itemCount, onClick, available }) => (
-  <div onClick={available ? onClick : null} className={`bg-white rounded-xl shadow-lg p-6 transition duration-300 ${available ? 'cursor-pointer hover:shadow-xl hover:scale-105 border-2 border-transparent hover:border-red-500' : 'opacity-60 cursor-not-allowed'}`}>
+  <div onClick={available ? onClick : null} className={`bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 transition duration-300 ${available ? 'cursor-pointer hover:shadow-xl hover:scale-105 border-2 border-transparent hover:border-red-500' : 'opacity-60 cursor-not-allowed'}`}>
     <div className="text-5xl mb-4">{icon}</div>
-    <h3 className="text-xl font-bold text-slate-800 mb-2">{title}</h3>
-    <p className="text-slate-600 text-sm mb-4">{description}</p>
+    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{title}</h3>
+    <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">{description}</p>
     <div className="flex items-center justify-between">
-      <span className={`text-xs font-medium px-3 py-1 rounded-full ${available ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+      <span className={`text-xs font-medium px-3 py-1 rounded-full ${available ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
         {available ? `${itemCount} ${itemCount === 1 ? 'Item' : 'Items'}` : 'Coming Soon'}
       </span>
-      {available && <span className="text-red-600 font-medium text-sm">View →</span>}
+      {available && <span className="text-red-600 dark:text-red-400 font-medium text-sm">View →</span>}
     </div>
   </div>
 );
@@ -1104,7 +690,11 @@ const CategoryCard = ({ title, icon, description, itemCount, onClick, available 
 // Dashboard Component
 const Dashboard = ({ user, onSelectCategory, onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const totalItems = itemsData.groups.reduce((sum, g) => sum + g.items.length, 0);
+  const [customItems] = useState(() => {
+    const saved = localStorage.getItem('elera_customItems');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const totalItems = itemsData.groups.reduce((sum, g) => sum + g.items.length, 0) + customItems.length;
   const pharmacyItems = pharmacyData.categories.reduce((sum, c) => sum + c.items.length, 0);
 
   const handleSearch = (e) => {
@@ -1114,16 +704,16 @@ const Dashboard = ({ user, onSelectCategory, onLogout }) => {
   };
   
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 transition-colors">
+      <header className="bg-white dark:bg-slate-800 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-xl font-bold text-slate-800">TOSHIBA</h1>
-              <p className="text-xs text-slate-500 tracking-wider">ELERA SCANBOOK PORTAL</p>
+              <h1 className="text-xl font-bold text-slate-800 dark:text-white">TOSHIBA</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 tracking-wider">ELERA SCANBOOK PORTAL</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-wrap justify-center">
             <div className="relative">
               <input 
                 type="text" 
@@ -1131,21 +721,22 @@ const Dashboard = ({ user, onSelectCategory, onLogout }) => {
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)} 
                 onKeyDown={handleSearch}
-                className="px-4 py-2 pl-9 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent w-48" 
+                className="px-4 py-2 pl-9 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent w-48 bg-white dark:bg-slate-700 text-slate-900 dark:text-white" 
               />
               <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <span className="text-sm text-slate-600">Welcome, <strong>{user}</strong></span>
-            <button onClick={onLogout} className="text-sm text-red-600 hover:text-red-700 font-medium cursor-pointer">Sign Out</button>
+            <DarkModeToggle />
+            <span className="text-sm text-slate-600 dark:text-slate-300">Welcome, <strong>{user}</strong></span>
+            <button onClick={onLogout} className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 font-medium cursor-pointer">Sign Out</button>
           </div>
         </div>
       </header>
       <main className="max-w-6xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">Select Retail Vertical</h2>
-          <p className="text-slate-600">Choose a category to access POS test scenarios and scannable barcodes</p>
+          <h2 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">Select Retail Vertical</h2>
+          <p className="text-slate-600 dark:text-slate-400">Choose a category to access POS test scenarios and scannable barcodes</p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <CategoryCard title="Grocery and General Merchandise" icon="🛒" description="Full-service grocery POS testing with produce, promotions, and loyalty programs." itemCount={8} onClick={() => onSelectCategory('grocery')} available={true} />
@@ -1161,13 +752,13 @@ const Dashboard = ({ user, onSelectCategory, onLogout }) => {
 
 // Test Card Component
 const TestCard = ({ test, onSelect, isSelected }) => (
-  <div onClick={() => onSelect(test.id)} className={`p-4 rounded-lg cursor-pointer transition ${isSelected ? 'bg-red-50 border-2 border-red-500' : 'bg-white border border-slate-200 hover:border-red-300'}`}>
+  <div onClick={() => onSelect(test.id)} className={`p-4 rounded-lg cursor-pointer transition ${isSelected ? 'bg-red-50 dark:bg-red-900/30 border-2 border-red-500' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-red-300 dark:hover:border-red-600'}`}>
     <div className="flex items-start justify-between mb-2">
-      <span className="text-xs font-bold text-slate-400">TEST {test.id}</span>
-      <span className={`text-xs px-2 py-1 rounded-full ${typeColors[test.type] || 'bg-slate-100 text-slate-600'}`}>{test.type}</span>
+      <span className="text-xs font-bold text-slate-400 dark:text-slate-500">TEST {test.id}</span>
+      <span className={`text-xs px-2 py-1 rounded-full ${typeColors[test.type] || 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>{test.type}</span>
     </div>
-    <h4 className="font-semibold text-slate-800">{test.name}</h4>
-    <p className="text-xs text-slate-500 mt-1">{test.items.length} items</p>
+    <h4 className="font-semibold text-slate-800 dark:text-white">{test.name}</h4>
+    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{test.items.length} items</p>
   </div>
 );
 
@@ -1180,30 +771,33 @@ const ScanBookView = ({ category, onBack }) => {
   const headerGradient = category === 'convenience' ? 'from-amber-600 to-orange-700' : 'from-red-600 to-red-700';
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 transition-colors">
+      <header className="bg-white dark:bg-slate-800 shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <button onClick={onBack} className="text-slate-600 hover:text-slate-800 cursor-pointer">← Back</button>
-            <div className="h-6 w-px bg-slate-300"></div>
+            <button onClick={onBack} className="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white cursor-pointer">← Back</button>
+            <div className="h-6 w-px bg-slate-300 dark:bg-slate-600 hidden sm:block"></div>
             <div>
-              <h1 className="text-lg font-bold text-slate-800">{data.title}</h1>
-              <p className="text-xs text-slate-500">United States Edition 2026 • Version 2.0</p>
+              <h1 className="text-lg font-bold text-slate-800 dark:text-white">{data.title}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">United States Edition 2026 • Version 2.1</p>
             </div>
           </div>
-          <button onClick={() => setShowAccounts(!showAccounts)} className="text-sm bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg transition cursor-pointer">{showAccounts ? 'Hide' : 'Show'} Test Accounts</button>
+          <div className="flex items-center gap-3">
+            <DarkModeToggle />
+            <button onClick={() => setShowAccounts(!showAccounts)} className="text-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg transition cursor-pointer">{showAccounts ? 'Hide' : 'Show'} Test Accounts</button>
+          </div>
         </div>
       </header>
       {showAccounts && (
-        <div className="bg-blue-50 border-b border-blue-100">
+        <div className="bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-800">
           <div className="max-w-7xl mx-auto px-4 py-4">
-            <h3 className="font-semibold text-blue-800 mb-3">Loyalty Program Test Accounts</h3>
+            <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-3">Test Loyalty Accounts</h3>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {data.loyaltyAccounts.map((account, i) => (
-                <div key={i} className="bg-white rounded-lg p-3 text-sm">
-                  <p className="font-semibold text-slate-800">{account.name}</p>
-                  <p className="text-slate-600 text-xs">{account.email}</p>
-                  <p className="text-slate-500 text-xs">{account.phone}</p>
+                <div key={i} className="bg-white dark:bg-slate-800 rounded-lg p-3 text-sm">
+                  <p className="font-semibold text-slate-800 dark:text-white">{account.name}</p>
+                  <p className="text-slate-600 dark:text-slate-400 text-xs">{account.email}</p>
+                  <p className="text-slate-500 dark:text-slate-500 text-xs">{account.phone}</p>
                 </div>
               ))}
             </div>
@@ -1211,61 +805,59 @@ const ScanBookView = ({ category, onBack }) => {
         </div>
       )}
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          <div className="w-72 flex-shrink-0">
-            <h3 className="font-semibold text-slate-700 mb-3">Test Scenarios</h3>
-            <div className="space-y-2">
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="w-full lg:w-72 flex-shrink-0">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">Test Scenarios</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
               {data.tests.map(test => (<TestCard key={test.id} test={test} onSelect={setSelectedTest} isSelected={selectedTest === test.id} />))}
             </div>
           </div>
           <div className="flex-1">
             {currentTest && (
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
                 <div className={`bg-gradient-to-r ${headerGradient} text-white p-6`}>
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
                     <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">TEST {currentTest.id}</span>
                     <span className="bg-white/20 px-3 py-1 rounded-full text-sm">{currentTest.type}</span>
                   </div>
                   <h2 className="text-2xl font-bold">{currentTest.name}</h2>
                 </div>
                 <div className="p-6">
-                  <div className="bg-slate-50 rounded-lg p-4 mb-6">
+                  <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 mb-6">
                     <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                      <div><span className="text-slate-500">Promotion:</span><p className="font-semibold text-slate-800">{currentTest.promotion}</p></div>
-                      <div><span className="text-slate-500">Valid:</span><p className="font-semibold text-slate-800">{currentTest.valid}</p></div>
-                      <div className="sm:col-span-2"><span className="text-slate-500">Discount:</span><p className="font-semibold text-green-700">{currentTest.discount}</p></div>
+                      <div><span className="text-slate-500 dark:text-slate-400">Promotion:</span><p className="font-semibold text-slate-800 dark:text-white">{currentTest.promotion}</p></div>
+                      <div><span className="text-slate-500 dark:text-slate-400">Valid:</span><p className="font-semibold text-slate-800 dark:text-white">{currentTest.valid}</p></div>
+                      <div className="sm:col-span-2"><span className="text-slate-500 dark:text-slate-400">Discount:</span><p className="font-semibold text-green-700 dark:text-green-400">{currentTest.discount}</p></div>
                     </div>
                   </div>
                   <div className="mb-6">
-                    <h3 className="font-semibold text-slate-700 mb-2">Test Steps</h3>
-                    <p className="text-slate-600 bg-yellow-50 border border-yellow-200 rounded-lg p-3">{currentTest.steps}</p>
+                    <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">Test Steps</h3>
+                    <p className="text-slate-600 dark:text-slate-300 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">{currentTest.steps}</p>
                   </div>
                   {currentTest.notes && (
                     <div className="mb-6">
-                      <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
                         <span className="text-lg">⚠️</span>
                         <span className="font-medium">{currentTest.notes}</span>
                       </div>
                     </div>
                   )}
-                  <div>
-                    <h3 className="font-semibold text-slate-700 mb-4">Scan Items</h3>
-                    <div className="space-y-4">
-                      {currentTest.items.map((item, i) => (
-                        <div key={i} className="border border-slate-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-slate-800">{item.name}</h4>
-                            <div className="flex gap-4 mt-1 text-sm">
-                              <span className="text-slate-500">SKU: <span className="font-mono text-slate-700">{item.sku}</span></span>
-                              <span className="text-slate-500">Barcode: <span className="font-mono text-slate-700">{item.barcode}</span></span>
-                            </div>
-                          </div>
-                          <div className="bg-white border border-slate-200 rounded-lg p-2">
-                            <Barcode value={item.barcode} height={50} />
+                  <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">Test Items</h3>
+                  <div className="space-y-3">
+                    {currentTest.items.map((item, i) => (
+                      <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 gap-4">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-slate-800 dark:text-white">{item.name}</h4>
+                          <div className="flex flex-wrap gap-3 mt-1">
+                            <span className="text-sm text-slate-500 dark:text-slate-400">SKU: <span className="font-mono text-slate-700 dark:text-slate-300">{item.sku}</span></span>
+                            <CopyButton text={item.sku} label="Copy SKU" />
                           </div>
                         </div>
-                      ))}
-                    </div>
+                        <div className="bg-white dark:bg-slate-600 rounded-lg p-2">
+                          <Barcode value={item.barcode} height={50} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1277,262 +869,335 @@ const ScanBookView = ({ category, onBack }) => {
   );
 };
 
-// Items View Component
+// Items View Component with enhanced search and Add Items feature
 const ItemsView = ({ onBack, initialSearch = '' }) => {
-  const [selectedGroup, setSelectedGroup] = useState(itemsData.groups[0]?.id || '');
   const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [deleteItem, setDeleteItem] = useState(null);
   
-  const currentGroup = itemsData.groups.find(g => g.id === selectedGroup);
+  // Custom items from localStorage
+  const [customItems, setCustomItems] = useState(() => {
+    const saved = localStorage.getItem('elera_customItems');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Save custom items to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('elera_customItems', JSON.stringify(customItems));
+  }, [customItems]);
+
+  // Build groups including custom items
+  const allGroups = [...itemsData.groups];
   
-  // If searching, search across ALL groups; otherwise filter current group
-  const filteredItems = searchTerm 
-    ? itemsData.groups.flatMap(g => g.items.filter(item => 
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku.toLowerCase().includes(searchTerm.toLowerCase())
-      ))
-    : (currentGroup?.items || []);
+  // Group custom items by department
+  const customItemsByDept = customItems.reduce((acc, item) => {
+    const dept = item.department || 'Custom_Items';
+    if (!acc[dept]) acc[dept] = [];
+    acc[dept].push(item);
+    return acc;
+  }, {});
+
+  // Add custom items group if there are any custom items with "Custom_Items" department
+  if (customItemsByDept['Custom_Items']?.length > 0) {
+    allGroups.unshift({
+      id: 'Custom_Items',
+      name: '⭐ Custom Items',
+      items: customItemsByDept['Custom_Items'],
+      isCustom: true
+    });
+  }
+
+  // Merge custom items into existing departments
+  const mergedGroups = allGroups.map(group => {
+    if (group.id !== 'Custom_Items' && customItemsByDept[group.id]) {
+      return {
+        ...group,
+        items: [...group.items, ...customItemsByDept[group.id].map(i => ({ ...i, isCustom: true }))]
+      };
+    }
+    return group;
+  });
+
+  const filteredGroups = mergedGroups.map(group => ({
+    ...group,
+    items: group.items.filter(item => 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  })).filter(group => group.items.length > 0);
+
+  const totalFiltered = filteredGroups.reduce((sum, g) => sum + g.items.length, 0);
+
+  const handleSaveItem = (item) => {
+    if (editItem) {
+      setCustomItems(prev => prev.map(i => i.id === item.id ? item : i));
+    } else {
+      setCustomItems(prev => [...prev, item]);
+    }
+    setEditItem(null);
+  };
+
+  const handleEditItem = (item) => {
+    setEditItem(item);
+    setShowAddModal(true);
+  };
+
+  const handleDeleteItem = () => {
+    if (deleteItem) {
+      setCustomItems(prev => prev.filter(i => i.id !== deleteItem.id));
+      setDeleteItem(null);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 transition-colors">
+      <header className="bg-white dark:bg-slate-800 shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <button onClick={onBack} className="text-slate-600 hover:text-slate-800 cursor-pointer">← Back</button>
-            <div className="h-6 w-px bg-slate-300"></div>
+            <button onClick={onBack} className="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white cursor-pointer">← Back</button>
+            <div className="h-6 w-px bg-slate-300 dark:bg-slate-600 hidden sm:block"></div>
             <div>
-              <h1 className="text-lg font-bold text-slate-800">Item Catalog Browser</h1>
-              <p className="text-xs text-slate-500">{itemsData.groups.reduce((sum, g) => sum + g.items.length, 0)} items across {itemsData.groups.length} departments</p>
+              <h1 className="text-lg font-bold text-slate-800 dark:text-white">{itemsData.title}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{totalFiltered} items {searchTerm && `matching "${searchTerm}"`}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <input type="text" placeholder="Search items..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64" />
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none">
+              <input 
+                type="text" 
+                placeholder="Search by name or SKU..." 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-4 py-2 pl-9 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent w-full sm:w-64 bg-white dark:bg-slate-700 text-slate-900 dark:text-white" 
+              />
+              <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">✕</button>
+              )}
+            </div>
+            <DarkModeToggle />
           </div>
         </div>
       </header>
+      
+      {/* Action Bar - Add Item */}
+      <div className="bg-gradient-to-r from-red-600 to-red-700 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="text-white">
+            <span className="font-medium">Manage Your Items</span>
+            <span className="text-red-200 text-sm ml-2">• Add custom items with barcodes</span>
+          </div>
+          <button
+            onClick={() => { setEditItem(null); setShowAddModal(true); }}
+            className="px-5 py-2.5 bg-white hover:bg-slate-100 text-red-600 font-semibold rounded-lg transition cursor-pointer flex items-center gap-2 shadow-sm"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add New Item
+          </button>
+        </div>
+      </div>
+
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          <div className="w-64 flex-shrink-0">
-            <h3 className="font-semibold text-slate-700 mb-3">Departments</h3>
-            <div className="space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto">
-              {itemsData.groups.map(group => (
-                <div key={group.id} onClick={() => { setSelectedGroup(group.id); setSearchTerm(''); }} className={`p-3 rounded-lg cursor-pointer transition text-sm ${selectedGroup === group.id ? 'bg-blue-50 border-2 border-blue-500' : 'bg-white border border-slate-200 hover:border-blue-300'}`}>
-                  <div className="font-medium text-slate-800">{group.name}</div>
-                  <div className="text-xs text-slate-500">{group.items.length} items</div>
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="w-full lg:w-64 flex-shrink-0">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">Departments</h3>
+            <div className="space-y-1 max-h-96 lg:max-h-[calc(100vh-200px)] overflow-y-auto">
+              <div onClick={() => setSelectedGroup(null)} className={`p-3 rounded-lg cursor-pointer transition text-sm ${!selectedGroup ? 'bg-red-50 dark:bg-red-900/30 border-2 border-red-500' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-red-300'}`}>
+                <span className="font-medium text-slate-800 dark:text-white">All Departments</span>
+                <span className="text-slate-500 dark:text-slate-400 ml-2">({totalFiltered})</span>
+              </div>
+              {filteredGroups.map(group => (
+                <div key={group.id} onClick={() => setSelectedGroup(group.id)} className={`p-3 rounded-lg cursor-pointer transition text-sm ${selectedGroup === group.id ? 'bg-red-50 dark:bg-red-900/30 border-2 border-red-500' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-red-300'}`}>
+                  <span className="font-medium text-slate-800 dark:text-white">{group.name}</span>
+                  <span className="text-slate-500 dark:text-slate-400 ml-2">({group.items.length})</span>
                 </div>
               ))}
             </div>
           </div>
           <div className="flex-1">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
-                <h2 className="text-2xl font-bold">{searchTerm ? 'Search Results' : (currentGroup?.name || 'Select a Department')}</h2>
-                <p className="text-blue-100 mt-1">{filteredItems.length} items {searchTerm && `matching "${searchTerm}"`}</p>
-              </div>
-              <div className="p-6">
-                <div className="grid gap-4">
-                  {filteredItems.map((item, i) => (
-                    <div key={i} className="border border-slate-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-slate-800">{item.name}</h4>
-                        <div className="flex gap-4 mt-1 text-sm">
-                          <span className="text-slate-500">SKU: <span className="font-mono text-slate-700">{item.sku}</span></span>
-                          <span className="text-slate-500">UOM: <span className="font-mono text-slate-700">{item.uom}</span></span>
+            <div className="grid gap-3">
+              {(selectedGroup ? filteredGroups.filter(g => g.id === selectedGroup) : filteredGroups).map(group => (
+                <div key={group.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
+                  <div className={`px-4 py-3 border-b border-slate-200 dark:border-slate-600 ${group.isCustom ? 'bg-amber-50 dark:bg-amber-900/30' : 'bg-slate-50 dark:bg-slate-700'}`}>
+                    <h3 className="font-semibold text-slate-800 dark:text-white">{group.name}</h3>
+                  </div>
+                  <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {group.items.map((item, i) => (
+                      <div key={item.id || i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-slate-800 dark:text-white truncate">{item.name}</h4>
+                            {item.isCustom && (
+                              <span className="text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded">Custom</span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="text-sm text-slate-500 dark:text-slate-400">SKU: <span className="font-mono text-slate-700 dark:text-slate-300">{item.sku}</span></span>
+                            <span className="text-xs bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">{item.uom}</span>
+                            <CopyButton text={item.sku} label="Copy" />
+                            {item.isCustom && (
+                              <>
+                                <button
+                                  onClick={() => handleEditItem(item)}
+                                  className="text-xs px-2 py-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800 dark:text-blue-300 transition cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => setDeleteItem(item)}
+                                  className="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900 dark:hover:bg-red-800 dark:text-red-300 transition cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg p-2 flex-shrink-0">
+                          <Barcode value={item.sku} height={40} />
                         </div>
                       </div>
-                      <div className="bg-white border border-slate-200 rounded-lg p-2">
-                        <Barcode value={item.sku} height={50} />
-                      </div>
-                    </div>
-                  ))}
-                  {filteredItems.length === 0 && (
-                    <div className="text-center py-12 text-slate-500">
-                      <p className="text-lg">No items found</p>
-                      <p className="text-sm">Try a different search term</p>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ))}
+              {filteredGroups.length === 0 && (
+                <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl">
+                  <p className="text-slate-500 dark:text-slate-400">No items found matching "{searchTerm}"</p>
+                  <button onClick={() => setSearchTerm('')} className="mt-2 text-red-600 dark:text-red-400 hover:underline cursor-pointer">Clear search</button>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </main>
+
+      {/* Add/Edit Item Modal */}
+      <AddItemModal
+        isOpen={showAddModal}
+        onClose={() => { setShowAddModal(false); setEditItem(null); }}
+        onSave={handleSaveItem}
+        editItem={editItem}
+        departments={itemsData.groups}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={!!deleteItem}
+        onClose={() => setDeleteItem(null)}
+        onConfirm={handleDeleteItem}
+        itemName={deleteItem?.name}
+      />
+
+      {/* Floating Action Button for Mobile */}
+      <button
+        onClick={() => { setEditItem(null); setShowAddModal(true); }}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg hover:shadow-xl transition cursor-pointer flex items-center justify-center z-20 lg:hidden"
+        title="Add New Item"
+      >
+        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
     </div>
   );
 };
 
-// Pharmacy View Component with promotions and items
+// Pharmacy View Component
 const PharmacyView = ({ onBack }) => {
-  const [selectedPromotion, setSelectedPromotion] = useState(1);
-  const [viewMode, setViewMode] = useState('promotions');
-  const [selectedCategory, setSelectedCategory] = useState('pharmacy');
-  
-  const currentPromotion = pharmacyData.promotions.find(p => p.id === selectedPromotion);
+  const [selectedCategory, setSelectedCategory] = useState(pharmacyData.categories[0]?.id || '');
+  const [searchTerm, setSearchTerm] = useState('');
   const currentCategory = pharmacyData.categories.find(c => c.id === selectedCategory);
   
-  const pharmacyPromos = pharmacyData.promotions.filter(p => p.categoryId === 'pharmacy');
-  const beautyPromos = pharmacyData.promotions.filter(p => p.categoryId === 'beauty');
-  const totalItems = pharmacyData.categories.reduce((sum, c) => sum + c.items.length, 0);
+  const filteredItems = currentCategory?.items.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.sku.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 transition-colors">
+      <header className="bg-white dark:bg-slate-800 shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <button onClick={onBack} className="text-slate-600 hover:text-slate-800 cursor-pointer">← Back</button>
-            <div className="h-6 w-px bg-slate-300"></div>
+            <button onClick={onBack} className="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white cursor-pointer">← Back</button>
+            <div className="h-6 w-px bg-slate-300 dark:bg-slate-600 hidden sm:block"></div>
             <div>
-              <h1 className="text-lg font-bold text-slate-800">{pharmacyData.title}</h1>
-              <p className="text-xs text-slate-500">{pharmacyData.promotions.length} promotions • {totalItems} items</p>
+              <h1 className="text-lg font-bold text-slate-800 dark:text-white">{pharmacyData.title}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{filteredItems.length} items</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setViewMode('promotions')} className={`px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${viewMode === 'promotions' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Promotions</button>
-            <button onClick={() => setViewMode('items')} className={`px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${viewMode === 'items' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>All Items</button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none">
+              <input 
+                type="text" 
+                placeholder="Search..." 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-4 py-2 pl-9 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent w-full sm:w-48 bg-white dark:bg-slate-700 text-slate-900 dark:text-white" 
+              />
+              <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <DarkModeToggle />
           </div>
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          <div className="w-72 flex-shrink-0">
-            {viewMode === 'promotions' ? (
-              <>
-                <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">💊</span>
-                    <h3 className="font-semibold text-slate-700">Pharmacy</h3>
-                    <span className="text-xs text-slate-400">({pharmacyPromos.length})</span>
-                  </div>
-                  <div className="space-y-2">
-                    {pharmacyPromos.map(promo => (
-                      <div key={promo.id} onClick={() => setSelectedPromotion(promo.id)} className={`p-3 rounded-lg cursor-pointer transition ${selectedPromotion === promo.id ? 'bg-purple-50 border-2 border-purple-500' : 'bg-white border border-slate-200 hover:border-purple-300'}`}>
-                        <div className="flex items-start justify-between mb-1">
-                          <span className="text-xs font-bold text-slate-400">PROMO {promo.id}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${typeColors[promo.type] || 'bg-slate-100 text-slate-600'}`}>{promo.type}</span>
-                        </div>
-                        <h4 className="font-medium text-slate-800 text-sm">{promo.name}</h4>
-                        <p className="text-xs text-slate-500 mt-1">{promo.items.length} items</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">✨</span>
-                    <h3 className="font-semibold text-slate-700">Beauty / Personal Care</h3>
-                    <span className="text-xs text-slate-400">({beautyPromos.length})</span>
-                  </div>
-                  <div className="space-y-2">
-                    {beautyPromos.map(promo => (
-                      <div key={promo.id} onClick={() => setSelectedPromotion(promo.id)} className={`p-3 rounded-lg cursor-pointer transition ${selectedPromotion === promo.id ? 'bg-purple-50 border-2 border-purple-500' : 'bg-white border border-slate-200 hover:border-purple-300'}`}>
-                        <div className="flex items-start justify-between mb-1">
-                          <span className="text-xs font-bold text-slate-400">PROMO {promo.id}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${typeColors[promo.type] || 'bg-slate-100 text-slate-600'}`}>{promo.type}</span>
-                        </div>
-                        <h4 className="font-medium text-slate-800 text-sm">{promo.name}</h4>
-                        <p className="text-xs text-slate-500 mt-1">{promo.items.length} items</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 className="font-semibold text-slate-700 mb-3">Categories</h3>
-                <div className="space-y-2">
-                  {pharmacyData.categories.map(category => (
-                    <div key={category.id} onClick={() => setSelectedCategory(category.id)} className={`p-4 rounded-lg cursor-pointer transition ${selectedCategory === category.id ? 'bg-purple-50 border-2 border-purple-500' : 'bg-white border border-slate-200 hover:border-purple-300'}`}>
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{category.icon}</span>
-                        <div>
-                          <div className="font-semibold text-slate-800">{category.name}</div>
-                          <div className="text-xs text-slate-500">{category.items.length} items</div>
-                        </div>
-                      </div>
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="w-full lg:w-72 flex-shrink-0">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">Categories</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
+              {pharmacyData.categories.map(category => (
+                <div key={category.id} onClick={() => setSelectedCategory(category.id)} className={`p-4 rounded-lg cursor-pointer transition ${selectedCategory === category.id ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-500' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{category.icon}</span>
+                    <div>
+                      <div className="font-semibold text-slate-800 dark:text-white text-sm">{category.name}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{category.items.length} items</div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </>
-            )}
+              ))}
+            </div>
           </div>
           <div className="flex-1">
-            {viewMode === 'promotions' && currentPromotion ? (
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
+            {currentCategory && (
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl">{currentPromotion.categoryId === 'pharmacy' ? '💊' : '✨'}</span>
-                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">PROMO {currentPromotion.id}</span>
-                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm">{currentPromotion.type}</span>
+                    <span className="text-3xl">{currentCategory.icon}</span>
                   </div>
-                  <h2 className="text-2xl font-bold">{currentPromotion.name}</h2>
+                  <h2 className="text-2xl font-bold">{currentCategory.name}</h2>
                 </div>
                 <div className="p-6">
-                  <div className="bg-slate-50 rounded-lg p-4 mb-6">
-                    <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                      <div><span className="text-slate-500">Promotion:</span><p className="font-semibold text-slate-800">{currentPromotion.promotion}</p></div>
-                      <div><span className="text-slate-500">Valid:</span><p className="font-semibold text-slate-800">{currentPromotion.valid}</p></div>
-                      <div className="sm:col-span-2"><span className="text-slate-500">Discount:</span><p className="font-semibold text-green-700 text-lg">{currentPromotion.discount}</p></div>
-                    </div>
-                  </div>
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-slate-700 mb-2">Test Steps</h3>
-                    <p className="text-slate-600 bg-yellow-50 border border-yellow-200 rounded-lg p-3">{currentPromotion.steps}</p>
-                  </div>
-                  {currentPromotion.notes && (
-                    <div className="mb-6">
-                      <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <span className="text-lg">⚠️</span>
-                        <span className="font-medium">{currentPromotion.notes}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <h3 className="font-semibold text-slate-700 mb-4">Qualifying Items</h3>
-                    <div className="space-y-4">
-                      {currentPromotion.items.map((item, i) => (
-                        <div key={i} className="border border-slate-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-slate-800">{item.name}</h4>
-                            <div className="flex gap-4 mt-1 text-sm">
-                              <span className="text-slate-500">SKU: <span className="font-mono text-slate-700">{item.sku}</span></span>
-                              <span className="text-slate-500">Barcode: <span className="font-mono text-slate-700">{item.barcode}</span></span>
-                            </div>
-                          </div>
-                          <div className="bg-white border border-slate-200 rounded-lg p-2">
-                            <Barcode value={item.barcode} height={50} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{currentCategory?.icon}</span>
-                    <div>
-                      <h2 className="text-2xl font-bold">{currentCategory?.name || 'Select a Category'}</h2>
-                      <p className="text-purple-100 mt-1">{currentCategory?.items.length} items</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="grid gap-4">
-                    {currentCategory?.items.map((item, i) => (
-                      <div key={i} className="border border-slate-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="grid gap-3">
+                    {filteredItems.map((item, i) => (
+                      <div key={i} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-slate-800">{item.name}</h4>
-                          <div className="flex gap-4 mt-1 text-sm">
-                            <span className="text-slate-500">SKU: <span className="font-mono text-slate-700">{item.sku}</span></span>
-                            <span className="text-slate-500">UOM: <span className="font-mono text-slate-700">{item.uom}</span></span>
+                          <h4 className="font-semibold text-slate-800 dark:text-white">{item.name}</h4>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="text-sm text-slate-500 dark:text-slate-400">SKU: <span className="font-mono text-slate-700 dark:text-slate-300">{item.sku}</span></span>
+                            <span className="text-xs bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">{item.uom}</span>
+                            <CopyButton text={item.sku} label="Copy" />
                           </div>
                         </div>
-                        <div className="bg-white border border-slate-200 rounded-lg p-2">
+                        <div className="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg p-2">
                           <Barcode value={item.sku} height={50} />
                         </div>
                       </div>
                     ))}
+                    {filteredItems.length === 0 && (
+                      <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                        No items found matching "{searchTerm}"
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1547,53 +1212,75 @@ const PharmacyView = ({ onBack }) => {
 // GS1-2D View Component
 const GS1View = ({ onBack }) => {
   const [selectedCategory, setSelectedCategory] = useState(gs1DataItems.categories[0]?.id || '');
+  const [searchTerm, setSearchTerm] = useState('');
   const currentCategory = gs1DataItems.categories.find(c => c.id === selectedCategory);
   const totalItems = gs1DataItems.categories.reduce((sum, c) => sum + c.items.length, 0);
 
+  const filteredItems = currentCategory?.items.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.gs1Display && item.gs1Display.toLowerCase().includes(searchTerm.toLowerCase()))
+  ) || [];
+
   const getStatusBadge = (status) => {
     switch(status) {
-      case 'expired': return 'bg-red-100 text-red-800 border-red-200';
-      case 'valid': return 'bg-green-100 text-green-800 border-green-200';
-      case 'age-verify': return 'bg-amber-100 text-amber-800 border-amber-200';
-      default: return 'bg-slate-100 text-slate-800 border-slate-200';
+      case 'expired': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-800';
+      case 'valid': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-800';
+      case 'age-verify': return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800';
+      default: return 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600';
     }
   };
 
   const getBarcodeTypeBadge = (type) => {
     switch(type) {
-      case 'GS1 2D': return 'bg-purple-100 text-purple-800';
-      case 'EAN-13': return 'bg-blue-100 text-blue-800';
-      case 'Code 128': return 'bg-indigo-100 text-indigo-800';
-      default: return 'bg-slate-100 text-slate-800';
+      case 'GS1 2D': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+      case 'EAN-13': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'Code 128': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
+      default: return 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300';
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 transition-colors">
+      <header className="bg-white dark:bg-slate-800 shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <button onClick={onBack} className="text-slate-600 hover:text-slate-800 cursor-pointer">← Back</button>
-            <div className="h-6 w-px bg-slate-300"></div>
+            <button onClick={onBack} className="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white cursor-pointer">← Back</button>
+            <div className="h-6 w-px bg-slate-300 dark:bg-slate-600 hidden sm:block"></div>
             <div>
-              <h1 className="text-lg font-bold text-slate-800">{gs1DataItems.title}</h1>
-              <p className="text-xs text-slate-500">{totalItems} items • {gs1DataItems.subtitle}</p>
+              <h1 className="text-lg font-bold text-slate-800 dark:text-white">{gs1DataItems.title}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{totalItems} items • {gs1DataItems.subtitle}</p>
             </div>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none">
+              <input 
+                type="text" 
+                placeholder="Search..." 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-4 py-2 pl-9 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent w-full sm:w-48 bg-white dark:bg-slate-700 text-slate-900 dark:text-white" 
+              />
+              <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <DarkModeToggle />
           </div>
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          <div className="w-72 flex-shrink-0">
-            <h3 className="font-semibold text-slate-700 mb-3">Categories</h3>
-            <div className="space-y-2">
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="w-full lg:w-72 flex-shrink-0">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">Categories</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
               {gs1DataItems.categories.map(category => (
-                <div key={category.id} onClick={() => setSelectedCategory(category.id)} className={`p-4 rounded-lg cursor-pointer transition ${selectedCategory === category.id ? 'bg-purple-50 border-2 border-purple-500' : 'bg-white border border-slate-200 hover:border-purple-300'}`}>
+                <div key={category.id} onClick={() => setSelectedCategory(category.id)} className={`p-4 rounded-lg cursor-pointer transition ${selectedCategory === category.id ? 'bg-purple-50 dark:bg-purple-900/30 border-2 border-purple-500' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-purple-300'}`}>
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{category.icon}</span>
                     <div>
-                      <div className="font-semibold text-slate-800 text-sm">{category.name}</div>
-                      <div className="text-xs text-slate-500">{category.items.length} items</div>
+                      <div className="font-semibold text-slate-800 dark:text-white text-sm">{category.name}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{category.items.length} items</div>
                     </div>
                   </div>
                 </div>
@@ -1602,7 +1289,7 @@ const GS1View = ({ onBack }) => {
           </div>
           <div className="flex-1">
             {currentCategory && (
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
                 <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-3xl">{currentCategory.icon}</span>
@@ -1612,27 +1299,28 @@ const GS1View = ({ onBack }) => {
                 </div>
                 <div className="p-6">
                   <div className="grid gap-4">
-                    {currentCategory.items.map((item, i) => (
-                      <div key={i} className={`border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4 ${item.status ? getStatusBadge(item.status) : 'border-slate-200'}`}>
+                    {filteredItems.map((item, i) => (
+                      <div key={i} className={`border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4 ${item.status ? getStatusBadge(item.status) : 'border-slate-200 dark:border-slate-700'}`}>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <h4 className="font-semibold text-slate-800">{item.name}</h4>
+                            <h4 className="font-semibold text-slate-800 dark:text-white">{item.name}</h4>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${getBarcodeTypeBadge(item.barcodeType)}`}>{item.barcodeType}</span>
                           </div>
                           <div className="flex gap-4 mt-1 text-sm flex-wrap">
-                            <span className="text-slate-500">SKU: <span className="font-mono text-slate-700">{item.sku}</span></span>
-                            {item.gtin && <span className="text-slate-500">GTIN: <span className="font-mono text-slate-700">{item.gtin}</span></span>}
+                            <span className="text-slate-500 dark:text-slate-400">SKU: <span className="font-mono text-slate-700 dark:text-slate-300">{item.sku}</span></span>
+                            {item.gtin && <span className="text-slate-500 dark:text-slate-400">GTIN: <span className="font-mono text-slate-700 dark:text-slate-300">{item.gtin}</span></span>}
                           </div>
                           {item.gs1Display && (
-                            <div className="mt-1 text-sm">
-                              <span className="text-slate-500">GS1: <span className="font-mono text-purple-700">{item.gs1Display}</span></span>
+                            <div className="mt-1 text-sm flex items-center gap-2 flex-wrap">
+                              <span className="text-slate-500 dark:text-slate-400">GS1: <span className="font-mono text-purple-700 dark:text-purple-400">{item.gs1Display}</span></span>
+                              <CopyButton text={item.gs1String || item.gs1Display} label="Copy GS1" />
                             </div>
                           )}
                           {item.note && (
-                            <p className="mt-2 text-sm text-slate-600 italic">{item.note}</p>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">{item.note}</p>
                           )}
                         </div>
-                        <div className="bg-white border border-slate-200 rounded-lg p-3">
+                        <div className="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg p-3">
                           {item.barcodeType === 'GS1 2D' ? (
                             <DataMatrixBarcode value={item.gtin || item.sku} gs1Data={item.gs1String} size={120} />
                           ) : item.barcodeType === 'Code 128' ? (
@@ -1643,6 +1331,11 @@ const GS1View = ({ onBack }) => {
                         </div>
                       </div>
                     ))}
+                    {filteredItems.length === 0 && (
+                      <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                        No items found matching "{searchTerm}"
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1655,7 +1348,7 @@ const GS1View = ({ onBack }) => {
 };
 
 // Main App Component
-export default function App() {
+function AppContent() {
   const [user, setUser] = useState(() => localStorage.getItem('elera_user'));
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -1738,4 +1431,13 @@ export default function App() {
   if (currentView === 'scanbook' && selectedCategory === 'gs1') return <GS1View onBack={handleBack} />;
   if (currentView === 'scanbook' && selectedCategory) return <ScanBookView category={selectedCategory} onBack={handleBack} />;
   return <Dashboard user={user} onSelectCategory={handleSelectCategory} onLogout={handleLogout} />;
+}
+
+// Wrap with DarkModeProvider
+export default function App() {
+  return (
+    <DarkModeProvider>
+      <AppContent />
+    </DarkModeProvider>
+  );
 }
