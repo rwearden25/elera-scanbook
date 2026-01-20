@@ -1524,6 +1524,8 @@ const Login = ({ onLogin }) => {
       onLogin(username);
     } else if (username === 'demo' && password === 'demo') {
       onLogin(username);
+    } else if (username === 'guest' && password === 'guest') {
+      onLogin(username);
     } else {
       setError('Invalid credentials. Please try again.');
     }
@@ -1555,6 +1557,13 @@ const Login = ({ onLogin }) => {
           <button type="button" onClick={handleLogin} className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition duration-200 cursor-pointer">Sign In</button>
         </div>
         <p className="mt-6 text-center text-xs text-slate-400">Version 2.1 • United States Edition 2026</p>
+        <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+          <p className="text-xs text-slate-500 dark:text-slate-400 text-center font-medium mb-2">Demo Accounts:</p>
+          <div className="text-xs text-slate-400 dark:text-slate-500 space-y-1">
+            <p><span className="font-mono">admin / elera2025</span> — Full access</p>
+            <p><span className="font-mono">guest / guest</span> — Read-only access</p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1758,7 +1767,7 @@ const ScanBookView = ({ category, onBack }) => {
 };
 
 // Items View Component with enhanced search and Add Items feature
-const ItemsView = ({ onBack, initialSearch = '' }) => {
+const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -1937,12 +1946,14 @@ const ItemsView = ({ onBack, initialSearch = '' }) => {
                                 >
                                   Edit
                                 </button>
-                                <button
-                                  onClick={() => setDeleteItem(item)}
-                                  className="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900 dark:hover:bg-red-800 dark:text-red-300 transition cursor-pointer"
-                                >
-                                  Delete
-                                </button>
+                                {user === 'admin' && (
+                                  <button
+                                    onClick={() => setDeleteItem(item)}
+                                    className="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900 dark:hover:bg-red-800 dark:text-red-300 transition cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
                               </>
                             )}
                           </div>
@@ -2314,7 +2325,7 @@ function AppContent() {
     return null; // Will re-render with correct user
   }
 
-  if (currentView === 'scanbook' && selectedCategory === 'items') return <ItemsView onBack={handleBack} initialSearch={initialSearch} />;
+  if (currentView === 'scanbook' && selectedCategory === 'items') return <ItemsView onBack={handleBack} initialSearch={initialSearch} user={user} />;
   if (currentView === 'scanbook' && selectedCategory === 'pharmacy') return <PharmacyView onBack={handleBack} />;
   if (currentView === 'scanbook' && selectedCategory === 'gs1') return <GS1View onBack={handleBack} />;
   if (currentView === 'scanbook' && selectedCategory) return <ScanBookView category={selectedCategory} onBack={handleBack} />;
