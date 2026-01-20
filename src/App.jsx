@@ -1,5 +1,36 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
 
+// Print Styles
+const printStyles = `
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area, .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .print\\:hidden {
+    display: none !important;
+  }
+  .print\\:break-inside-avoid {
+    break-inside: avoid;
+  }
+}
+`;
+
+// Inject print styles
+if (typeof document !== 'undefined') {
+  const styleEl = document.createElement('style');
+  styleEl.textContent = printStyles;
+  document.head.appendChild(styleEl);
+}
+
 // Dark Mode Context
 const DarkModeContext = createContext();
 
@@ -1350,7 +1381,7 @@ const typeColors = {
 };
 
 // Add Item Modal Component
-const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments }) => {
+const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments, existingItems = [] }) => {
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -1368,6 +1399,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments }) => {
     weightUnit: 'kg'
   });
   const [errors, setErrors] = useState({});
+  const [duplicateItem, setDuplicateItem] = useState(null);
 
   useEffect(() => {
     if (editItem) {
@@ -1391,7 +1423,18 @@ const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments }) => {
       setFormData({ name: '', sku: '', uom: 'EA', department: 'Custom_Items', barcodeType: '1D', gtin: '', batchLot: '', expirationDate: '', serialNumber: '', sellByDate: '', bestBeforeDate: '', productionDate: '', weight: '', weightUnit: 'kg' });
     }
     setErrors({});
+    setDuplicateItem(null);
   }, [editItem, isOpen]);
+
+  // Check for duplicate SKU
+  const checkDuplicate = (sku) => {
+    if (!sku) return null;
+    const found = existingItems.find(item => 
+      item.sku.toLowerCase() === sku.toLowerCase() && 
+      (!editItem || item.sku.toLowerCase() !== editItem.sku.toLowerCase())
+    );
+    return found || null;
+  };
 
   // Build GS1 string from form data
   const buildGs1String = () => {
@@ -1429,8 +1472,33 @@ const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments }) => {
     if (!formData.name.trim()) newErrors.name = 'Item name is required';
     if (!formData.sku.trim()) newErrors.sku = 'SKU is required';
     if (formData.sku.length > 50) newErrors.sku = 'SKU must be 50 characters or less';
+    
+    // Check for duplicate SKU
+    const duplicate = checkDuplicate(formData.sku);
+    if (duplicate) {
+      newErrors.sku = `SKU already exists: "${duplicate.name}"`;
+      setDuplicateItem(duplicate);
+    } else {
+      setDuplicateItem(null);
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Real-time duplicate check on SKU change
+  const handleSkuChange = (value) => {
+    setFormData({ ...formData, sku: value });
+    const duplicate = checkDuplicate(value);
+    setDuplicateItem(duplicate);
+    if (duplicate) {
+      setErrors(prev => ({ ...prev, sku: `SKU already exists: "${duplicate.name}"` }));
+    } else {
+      setErrors(prev => {
+        const { sku, ...rest } = prev;
+        return rest;
+      });
+    }
   };
 
   const isGs1Type = formData.barcodeType === 'GS1 2D' || formData.barcodeType === 'GS1 QR' || formData.barcodeType === 'GS1-128';
@@ -1480,11 +1548,18 @@ const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments }) => {
             <input
               type="text"
               value={formData.sku}
-              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+              onChange={(e) => handleSkuChange(e.target.value)}
               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono ${errors.sku ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}
               placeholder="e.g., 123456789012"
             />
             {errors.sku && <p className="text-red-500 text-xs mt-1">{errors.sku}</p>}
+            {duplicateItem && (
+              <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg">
+                <p className="text-xs text-amber-800 dark:text-amber-200 font-medium">⚠️ Duplicate Found:</p>
+                <p className="text-xs text-amber-700 dark:text-amber-300">"{duplicateItem.name}" in {duplicateItem.department || 'catalog'}</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Use a different SKU or edit the existing item.</p>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -1711,6 +1786,334 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, itemName }) => {
               Delete
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Print Modal Component
+const PrintModal = ({ isOpen, onClose, items, onRemove, onClearAll }) => {
+  if (!isOpen) return null;
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            🖨️ Print Queue ({items.length} items)
+          </h2>
+          <div className="flex items-center gap-2">
+            <button onClick={onClearAll} className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 cursor-pointer">Clear All</button>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer text-xl">×</button>
+          </div>
+        </div>
+        <div className="p-4 overflow-y-auto max-h-[60vh]">
+          {items.length === 0 ? (
+            <p className="text-center text-slate-500 dark:text-slate-400 py-8">No items in print queue. Click the 🖨️ Print button on items to add them.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 print:grid-cols-3">
+              {items.map((item, i) => (
+                <div key={i} className="border border-slate-200 dark:border-slate-600 rounded-lg p-4 text-center relative print:break-inside-avoid">
+                  <button
+                    onClick={() => onRemove(item.sku)}
+                    className="absolute top-2 right-2 text-slate-400 hover:text-red-500 cursor-pointer print:hidden"
+                  >
+                    ✕
+                  </button>
+                  <h4 className="font-semibold text-slate-800 dark:text-white text-sm mb-1 truncate">{item.name}</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mb-3">{item.sku}</p>
+                  <div className="flex justify-center">
+                    <Barcode value={item.sku} height={50} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-3 p-4 border-t border-slate-200 dark:border-slate-700 print:hidden">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+          >
+            Close
+          </button>
+          <button
+            onClick={handlePrint}
+            disabled={items.length === 0}
+            className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-400 text-white rounded-lg transition cursor-pointer flex items-center gap-2"
+          >
+            🖨️ Print Barcodes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Import Modal Component
+const ImportModal = ({ isOpen, onClose, onImport, existingItems = [] }) => {
+  const [importData, setImportData] = useState('');
+  const [importType, setImportType] = useState('csv');
+  const [error, setError] = useState('');
+  const [preview, setPreview] = useState([]);
+  const [duplicates, setDuplicates] = useState([]);
+
+  // Check if SKU exists in catalog or custom items
+  const checkExistingDuplicate = (sku) => {
+    return existingItems.find(item => item.sku.toLowerCase() === sku.toLowerCase());
+  };
+
+  const parseCSV = (text) => {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) throw new Error('CSV must have header row and at least one data row');
+    
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const nameIdx = headers.findIndex(h => h === 'name' || h === 'item name' || h === 'itemname');
+    const skuIdx = headers.findIndex(h => h === 'sku' || h === 'barcode' || h === 'upc');
+    const uomIdx = headers.findIndex(h => h === 'uom' || h === 'unit');
+    const deptIdx = headers.findIndex(h => h === 'department' || h === 'dept' || h === 'category');
+    
+    if (nameIdx === -1 || skuIdx === -1) {
+      throw new Error('CSV must have "name" and "sku" columns');
+    }
+    
+    return lines.slice(1).filter(line => line.trim()).map(line => {
+      const values = line.split(',').map(v => v.trim());
+      return {
+        name: values[nameIdx] || '',
+        sku: values[skuIdx] || '',
+        uom: uomIdx !== -1 ? values[uomIdx] || 'EA' : 'EA',
+        department: deptIdx !== -1 ? values[deptIdx] || 'Custom_Items' : 'Custom_Items',
+        barcodeType: '1D',
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+      };
+    }).filter(item => item.name && item.sku);
+  };
+
+  const parseJSON = (text) => {
+    const data = JSON.parse(text);
+    const items = Array.isArray(data) ? data : data.items || data.data || [];
+    return items.map(item => ({
+      name: item.name || item.itemName || item.displayName || '',
+      sku: item.sku || item.barcode || item.upc || item.skuId || '',
+      uom: item.uom || item.unit || 'EA',
+      department: item.department || item.dept || item.category || 'Custom_Items',
+      barcodeType: item.barcodeType || '1D',
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+    })).filter(item => item.name && item.sku);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImportData(event.target.result);
+      setImportType(file.name.endsWith('.json') ? 'json' : 'csv');
+      setPreview([]);
+      setDuplicates([]);
+      setError('');
+    };
+    reader.readAsText(file);
+  };
+
+  const handlePreview = () => {
+    try {
+      setError('');
+      setDuplicates([]);
+      const items = importType === 'csv' ? parseCSV(importData) : parseJSON(importData);
+      if (items.length === 0) throw new Error('No valid items found');
+      
+      // Check for duplicates against existing items
+      const dupes = [];
+      const seenSkus = new Set();
+      
+      items.forEach(item => {
+        // Check against existing catalog/custom items
+        const existingDupe = checkExistingDuplicate(item.sku);
+        if (existingDupe) {
+          dupes.push({ 
+            item, 
+            conflictsWith: existingDupe, 
+            reason: 'exists' 
+          });
+        }
+        // Check for duplicates within the import batch
+        else if (seenSkus.has(item.sku.toLowerCase())) {
+          dupes.push({ 
+            item, 
+            conflictsWith: null, 
+            reason: 'batch' 
+          });
+        }
+        seenSkus.add(item.sku.toLowerCase());
+      });
+      
+      setDuplicates(dupes);
+      setPreview(items);
+    } catch (e) {
+      setError(e.message);
+      setPreview([]);
+      setDuplicates([]);
+    }
+  };
+
+  const handleImport = () => {
+    if (preview.length > 0) {
+      // Filter out duplicates before importing
+      const duplicateSkus = new Set(duplicates.map(d => d.item.sku.toLowerCase()));
+      const itemsToImport = preview.filter(item => !duplicateSkus.has(item.sku.toLowerCase()));
+      
+      if (itemsToImport.length === 0) {
+        setError('No unique items to import. All items are duplicates.');
+        return;
+      }
+      
+      onImport(itemsToImport);
+      setImportData('');
+      setPreview([]);
+      setDuplicates([]);
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white">📥 Import Items</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer text-xl">×</button>
+        </div>
+        <div className="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Upload File (CSV or JSON)</label>
+            <input
+              type="file"
+              accept=".csv,.json"
+              onChange={handleFileUpload}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+            />
+          </div>
+          <div className="text-center text-slate-400 dark:text-slate-500">— or —</div>
+          <div>
+            <div className="flex items-center gap-4 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Paste Data</label>
+              <select
+                value={importType}
+                onChange={(e) => setImportType(e.target.value)}
+                className="text-sm px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+              >
+                <option value="csv">CSV</option>
+                <option value="json">JSON</option>
+              </select>
+            </div>
+            <textarea
+              value={importData}
+              onChange={(e) => setImportData(e.target.value)}
+              placeholder={importType === 'csv' ? 'name,sku,uom,department\nOrganic Milk,123456789,EA,Dairy\nApple Juice,987654321,EA,Beverages' : '[\n  {"name": "Organic Milk", "sku": "123456789"},\n  {"name": "Apple Juice", "sku": "987654321"}\n]'}
+              className="w-full h-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono text-sm"
+            />
+          </div>
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+              {error}
+            </div>
+          )}
+          {preview.length > 0 && (
+            <div>
+              <h4 className="font-medium text-slate-700 dark:text-slate-300 mb-2">Preview ({preview.length} items)</h4>
+              
+              {/* Duplicates Warning */}
+              {duplicates.length > 0 && (
+                <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+                    ⚠️ {duplicates.length} Duplicate SKU{duplicates.length > 1 ? 's' : ''} Found (will be skipped):
+                  </p>
+                  <div className="max-h-24 overflow-y-auto">
+                    {duplicates.map((dupe, i) => (
+                      <p key={i} className="text-xs text-amber-700 dark:text-amber-300">
+                        • <span className="font-mono">{dupe.item.sku}</span> "{dupe.item.name}" 
+                        {dupe.reason === 'exists' && dupe.conflictsWith && (
+                          <span> — conflicts with existing "{dupe.conflictsWith.name}"</span>
+                        )}
+                        {dupe.reason === 'batch' && (
+                          <span> — duplicate in import file</span>
+                        )}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-600 rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 dark:bg-slate-700">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-slate-700 dark:text-slate-300">Status</th>
+                      <th className="px-3 py-2 text-left text-slate-700 dark:text-slate-300">Name</th>
+                      <th className="px-3 py-2 text-left text-slate-700 dark:text-slate-300">SKU</th>
+                      <th className="px-3 py-2 text-left text-slate-700 dark:text-slate-300">UOM</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {preview.slice(0, 10).map((item, i) => {
+                      const isDuplicate = duplicates.some(d => d.item.sku === item.sku);
+                      return (
+                        <tr key={i} className={isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : ''}>
+                          <td className="px-3 py-2">
+                            {isDuplicate ? (
+                              <span className="text-amber-600 dark:text-amber-400" title="Duplicate - will be skipped">⚠️</span>
+                            ) : (
+                              <span className="text-green-600 dark:text-green-400" title="Will be imported">✓</span>
+                            )}
+                          </td>
+                          <td className={`px-3 py-2 ${isDuplicate ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-800 dark:text-white'}`}>{item.name}</td>
+                          <td className={`px-3 py-2 font-mono ${isDuplicate ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-600 dark:text-slate-400'}`}>{item.sku}</td>
+                          <td className={`px-3 py-2 ${isDuplicate ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>{item.uom}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {preview.length > 10 && (
+                  <p className="text-center py-2 text-slate-500 dark:text-slate-400 text-sm">...and {preview.length - 10} more</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-3 p-4 border-t border-slate-200 dark:border-slate-700">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          {preview.length === 0 ? (
+            <button
+              onClick={handlePreview}
+              disabled={!importData.trim()}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-lg transition cursor-pointer"
+            >
+              Preview
+            </button>
+          ) : (
+            <button
+              onClick={handleImport}
+              disabled={preview.length - duplicates.length === 0}
+              className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-400 text-white rounded-lg transition cursor-pointer"
+            >
+              Import {preview.length - duplicates.length} Item{preview.length - duplicates.length !== 1 ? 's' : ''}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1977,6 +2380,10 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [printItems, setPrintItems] = useState([]);
   
   // Custom items from localStorage (includes new items AND edited catalog items)
   const [customItems, setCustomItems] = useState(() => {
@@ -1990,6 +2397,12 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Favorite items from localStorage
+  const [favorites, setFavorites] = useState(() => {
+    const saved = localStorage.getItem('elera_favorites');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Save custom items to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('elera_customItems', JSON.stringify(customItems));
@@ -1999,6 +2412,31 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
   useEffect(() => {
     localStorage.setItem('elera_deletedItems', JSON.stringify(deletedItems));
   }, [deletedItems]);
+
+  // Save favorites to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('elera_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  // Toggle favorite
+  const toggleFavorite = (sku) => {
+    setFavorites(prev => 
+      prev.includes(sku) ? prev.filter(s => s !== sku) : [...prev, sku]
+    );
+  };
+
+  // Add to print queue
+  const addToPrint = (item) => {
+    setPrintItems(prev => {
+      if (prev.find(i => i.sku === item.sku)) return prev;
+      return [...prev, item];
+    });
+  };
+
+  // Remove from print queue
+  const removeFromPrint = (sku) => {
+    setPrintItems(prev => prev.filter(i => i.sku !== sku));
+  };
 
   // Build groups including custom items, excluding deleted items
   const allGroups = itemsData.groups.map(group => ({
@@ -2037,13 +2475,19 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
 
   const filteredGroups = mergedGroups.map(group => ({
     ...group,
-    items: group.items.filter(item => 
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    items: group.items.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.sku.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFavorites = !showFavoritesOnly || favorites.includes(item.sku);
+      return matchesSearch && matchesFavorites;
+    })
   })).filter(group => group.items.length > 0);
 
   const totalFiltered = filteredGroups.reduce((sum, g) => sum + g.items.length, 0);
+  const totalFavorites = favorites.length;
+
+  // Flatten all items for duplicate checking
+  const allExistingItems = mergedGroups.flatMap(group => group.items);
 
   const handleSaveItem = (item) => {
     if (editItem) {
@@ -2118,22 +2562,43 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
         </div>
       </header>
       
-      {/* Action Bar - Add Item */}
+      {/* Action Bar */}
       <div className="bg-gradient-to-r from-red-600 to-red-700 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="text-white">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-white flex items-center gap-4">
             <span className="font-medium">Manage Your Items</span>
-            <span className="text-red-200 text-sm ml-2">• Add custom items with barcodes</span>
+            <button
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer flex items-center gap-1 ${showFavoritesOnly ? 'bg-yellow-400 text-yellow-900' : 'bg-white/20 text-white hover:bg-white/30'}`}
+            >
+              ⭐ Favorites {totalFavorites > 0 && `(${totalFavorites})`}
+            </button>
+            {printItems.length > 0 && (
+              <button
+                onClick={() => setShowPrintModal(true)}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-500 text-white hover:bg-green-600 transition cursor-pointer flex items-center gap-1"
+              >
+                🖨️ Print Queue ({printItems.length})
+              </button>
+            )}
           </div>
-          <button
-            onClick={() => { setEditItem(null); setShowAddModal(true); }}
-            className="px-5 py-2.5 bg-white hover:bg-slate-100 text-red-600 font-semibold rounded-lg transition cursor-pointer flex items-center gap-2 shadow-sm"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add New Item
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="px-4 py-2.5 bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg transition cursor-pointer flex items-center gap-2"
+            >
+              📥 Import
+            </button>
+            <button
+              onClick={() => { setEditItem(null); setShowAddModal(true); }}
+              className="px-5 py-2.5 bg-white hover:bg-slate-100 text-red-600 font-semibold rounded-lg transition cursor-pointer flex items-center gap-2 shadow-sm"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add New Item
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2166,6 +2631,13 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
                       <div key={item.id || i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => toggleFavorite(item.sku)}
+                              className="text-lg cursor-pointer hover:scale-110 transition"
+                              title={favorites.includes(item.sku) ? "Remove from favorites" : "Add to favorites"}
+                            >
+                              {favorites.includes(item.sku) ? '⭐' : '☆'}
+                            </button>
                             <h4 className="font-medium text-slate-800 dark:text-white truncate">{item.name}</h4>
                             {item.isCustom && (
                               <span className="text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded">Custom</span>
@@ -2175,6 +2647,13 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
                             <span className="text-sm text-slate-500 dark:text-slate-400">SKU: <span className="font-mono text-slate-700 dark:text-slate-300">{item.sku}</span></span>
                             <span className="text-xs bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">{item.uom}</span>
                             <CopyButton text={item.sku} label="Copy" />
+                            <button
+                              onClick={() => addToPrint(item)}
+                              className="text-xs px-2 py-1 rounded bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900 dark:hover:bg-green-800 dark:text-green-300 transition cursor-pointer"
+                              title="Add to print queue"
+                            >
+                              🖨️ Print
+                            </button>
                             {user === 'admin' && (
                               <>
                                 <button
@@ -2227,6 +2706,7 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
         onSave={handleSaveItem}
         editItem={editItem}
         departments={itemsData.groups}
+        existingItems={allExistingItems}
       />
 
       {/* Delete Confirmation Modal */}
@@ -2235,6 +2715,25 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
         onClose={() => setDeleteItem(null)}
         onConfirm={handleDeleteItem}
         itemName={deleteItem?.name}
+      />
+
+      {/* Print Modal */}
+      <PrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        items={printItems}
+        onRemove={removeFromPrint}
+        onClearAll={() => setPrintItems([])}
+      />
+
+      {/* Import Modal */}
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        existingItems={allExistingItems}
+        onImport={(items) => {
+          setCustomItems(prev => [...prev, ...items.map(item => ({ ...item, isCustom: true }))]);
+        }}
       />
 
       {/* Floating Action Button for Mobile */}
