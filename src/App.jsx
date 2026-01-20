@@ -1623,7 +1623,7 @@ const Dashboard = ({ user, onSelectCategory, onLogout }) => {
       </header>
       <main className="max-w-6xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">Select Retail Vertical</h2>
+          <h2 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">Choose a Retail Experience</h2>
           <p className="text-slate-600 dark:text-slate-400">Choose a category to access POS test scenarios and scannable barcodes</p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
