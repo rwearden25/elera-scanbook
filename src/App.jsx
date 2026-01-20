@@ -1355,7 +1355,17 @@ const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments }) => {
     name: '',
     sku: '',
     uom: 'EA',
-    department: 'Custom_Items'
+    department: 'Custom_Items',
+    barcodeType: '1D',
+    gtin: '',
+    batchLot: '',
+    expirationDate: '',
+    serialNumber: '',
+    sellByDate: '',
+    bestBeforeDate: '',
+    productionDate: '',
+    weight: '',
+    weightUnit: 'kg'
   });
   const [errors, setErrors] = useState({});
 
@@ -1365,30 +1375,79 @@ const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments }) => {
         name: editItem.name,
         sku: editItem.sku,
         uom: editItem.uom,
-        department: editItem.department || 'Custom_Items'
+        department: editItem.department || 'Custom_Items',
+        barcodeType: editItem.barcodeType || '1D',
+        gtin: editItem.gtin || '',
+        batchLot: editItem.batchLot || '',
+        expirationDate: editItem.expirationDate || '',
+        serialNumber: editItem.serialNumber || '',
+        sellByDate: editItem.sellByDate || '',
+        bestBeforeDate: editItem.bestBeforeDate || '',
+        productionDate: editItem.productionDate || '',
+        weight: editItem.weight || '',
+        weightUnit: editItem.weightUnit || 'kg'
       });
     } else {
-      setFormData({ name: '', sku: '', uom: 'EA', department: 'Custom_Items' });
+      setFormData({ name: '', sku: '', uom: 'EA', department: 'Custom_Items', barcodeType: '1D', gtin: '', batchLot: '', expirationDate: '', serialNumber: '', sellByDate: '', bestBeforeDate: '', productionDate: '', weight: '', weightUnit: 'kg' });
     }
     setErrors({});
   }, [editItem, isOpen]);
+
+  // Build GS1 string from form data
+  const buildGs1String = () => {
+    let gs1 = '';
+    const gtin = formData.gtin || formData.sku.padStart(14, '0');
+    gs1 = `(01)${gtin}`;
+    if (formData.productionDate) {
+      const dateStr = formData.productionDate.replace(/-/g, '').substring(2); // YYMMDD
+      gs1 += `(11)${dateStr}`;
+    }
+    if (formData.bestBeforeDate) {
+      const dateStr = formData.bestBeforeDate.replace(/-/g, '').substring(2);
+      gs1 += `(15)${dateStr}`;
+    }
+    if (formData.sellByDate) {
+      const dateStr = formData.sellByDate.replace(/-/g, '').substring(2);
+      gs1 += `(16)${dateStr}`;
+    }
+    if (formData.expirationDate) {
+      const dateStr = formData.expirationDate.replace(/-/g, '').substring(2);
+      gs1 += `(17)${dateStr}`;
+    }
+    if (formData.batchLot) gs1 += `(10)${formData.batchLot}`;
+    if (formData.serialNumber) gs1 += `(21)${formData.serialNumber}`;
+    if (formData.weight) {
+      const weightAI = formData.weightUnit === 'kg' ? '310' : '320';
+      const weightVal = (parseFloat(formData.weight) * 1000).toFixed(0).padStart(6, '0');
+      gs1 += `(${weightAI}3)${weightVal}`;
+    }
+    return gs1;
+  };
 
   const validate = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Item name is required';
     if (!formData.sku.trim()) newErrors.sku = 'SKU is required';
-    if (formData.sku.length > 20) newErrors.sku = 'SKU must be 20 characters or less';
+    if (formData.sku.length > 50) newErrors.sku = 'SKU must be 50 characters or less';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const isGs1Type = formData.barcodeType === 'GS1 2D' || formData.barcodeType === 'GS1 QR' || formData.barcodeType === 'GS1-128';
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      onSave({
+      const itemData = {
         ...formData,
         id: editItem?.id || Date.now().toString()
-      });
+      };
+      // Add GS1 string if GS1 barcode type
+      if (isGs1Type) {
+        itemData.gs1String = buildGs1String();
+        itemData.gs1Display = buildGs1String();
+      }
+      onSave(itemData);
       onClose();
     }
   };
@@ -1397,8 +1456,8 @@ const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800">
           <h2 className="text-lg font-bold text-slate-800 dark:text-white">
             {editItem ? 'Edit Item' : 'Add New Item'}
           </h2>
@@ -1446,18 +1505,163 @@ const AddItemModal = ({ isOpen, onClose, onSave, editItem, departments }) => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Barcode Type</label>
               <select
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                value={formData.barcodeType}
+                onChange={(e) => setFormData({ ...formData, barcodeType: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
               >
-                <option value="Custom_Items">Custom Items</option>
-                {departments.map(dept => (
-                  <option key={dept.id} value={dept.id}>{dept.name}</option>
-                ))}
+                <optgroup label="1D Linear Barcodes">
+                  <option value="1D">UPC-A (12 digits)</option>
+                  <option value="UPC-E">UPC-E (8 digits)</option>
+                  <option value="EAN-13">EAN-13 (13 digits)</option>
+                  <option value="EAN-8">EAN-8 (8 digits)</option>
+                  <option value="Code 128">Code 128</option>
+                  <option value="Code 39">Code 39</option>
+                  <option value="ITF-14">ITF-14 (14 digits)</option>
+                </optgroup>
+                <optgroup label="GS1 2D Barcodes">
+                  <option value="GS1 2D">GS1 DataMatrix</option>
+                  <option value="GS1 QR">GS1 QR Code</option>
+                  <option value="GS1-128">GS1-128 (with AIs)</option>
+                </optgroup>
+                <optgroup label="2D Barcodes">
+                  <option value="QR">QR Code</option>
+                  <option value="PDF417">PDF417</option>
+                </optgroup>
               </select>
             </div>
+          </div>
+
+          {/* GS1 Data Fields - shown when GS1 barcode type selected */}
+          {isGs1Type && (
+            <div className="border border-purple-200 dark:border-purple-800 rounded-lg p-3 bg-purple-50 dark:bg-purple-900/20">
+              <h4 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-3">GS1 Application Identifiers</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">GTIN (AI 01) - 14 digits</label>
+                  <input
+                    type="text"
+                    value={formData.gtin}
+                    onChange={(e) => setFormData({ ...formData, gtin: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono text-sm"
+                    placeholder="Leave blank to use SKU"
+                    maxLength={14}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Production Date (AI 11)</label>
+                    <input
+                      type="date"
+                      value={formData.productionDate}
+                      onChange={(e) => setFormData({ ...formData, productionDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Best Before (AI 15)</label>
+                    <input
+                      type="date"
+                      value={formData.bestBeforeDate}
+                      onChange={(e) => setFormData({ ...formData, bestBeforeDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Sell By Date (AI 16)</label>
+                    <input
+                      type="date"
+                      value={formData.sellByDate}
+                      onChange={(e) => setFormData({ ...formData, sellByDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Expiration Date (AI 17)</label>
+                    <input
+                      type="date"
+                      value={formData.expirationDate}
+                      onChange={(e) => setFormData({ ...formData, expirationDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Batch/Lot (AI 10)</label>
+                    <input
+                      type="text"
+                      value={formData.batchLot}
+                      onChange={(e) => setFormData({ ...formData, batchLot: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono text-sm"
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Serial Number (AI 21)</label>
+                    <input
+                      type="text"
+                      value={formData.serialNumber}
+                      onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono text-sm"
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Weight (AI 310x/320x)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={formData.weight}
+                      onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono text-sm"
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Weight Unit</label>
+                    <select
+                      value={formData.weightUnit}
+                      onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm"
+                    >
+                      <option value="kg">Kilograms (AI 310x)</option>
+                      <option value="lb">Pounds (AI 320x)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {formData.sku && (
+                  <div className="mt-2 p-2 bg-white dark:bg-slate-800 rounded border border-purple-200 dark:border-purple-700">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Preview GS1 String:</p>
+                    <p className="text-xs font-mono text-purple-700 dark:text-purple-300 break-all">{buildGs1String()}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department</label>
+            <select
+              value={formData.department}
+              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+            >
+              <option value="Custom_Items">Custom Items</option>
+              {departments.map(dept => (
+                <option key={dept.id} value={dept.id}>{dept.name}</option>
+              ))}
+            </select>
           </div>
           <div className="flex gap-3 pt-2">
             <button
@@ -1774,9 +1978,15 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
-  // Custom items from localStorage
+  // Custom items from localStorage (includes new items AND edited catalog items)
   const [customItems, setCustomItems] = useState(() => {
     const saved = localStorage.getItem('elera_customItems');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Deleted catalog items from localStorage
+  const [deletedItems, setDeletedItems] = useState(() => {
+    const saved = localStorage.getItem('elera_deletedItems');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -1785,8 +1995,16 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
     localStorage.setItem('elera_customItems', JSON.stringify(customItems));
   }, [customItems]);
 
-  // Build groups including custom items
-  const allGroups = [...itemsData.groups];
+  // Save deleted items to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('elera_deletedItems', JSON.stringify(deletedItems));
+  }, [deletedItems]);
+
+  // Build groups including custom items, excluding deleted items
+  const allGroups = itemsData.groups.map(group => ({
+    ...group,
+    items: group.items.filter(item => !deletedItems.includes(item.sku))
+  }));
   
   // Group custom items by department
   const customItemsByDept = customItems.reduce((acc, item) => {
@@ -1829,9 +2047,22 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
 
   const handleSaveItem = (item) => {
     if (editItem) {
-      setCustomItems(prev => prev.map(i => i.id === item.id ? item : i));
+      // Check if this is an existing custom item
+      const existingCustom = customItems.find(i => i.id === item.id);
+      if (existingCustom) {
+        setCustomItems(prev => prev.map(i => i.id === item.id ? item : i));
+      } else {
+        // This is an edited catalog item - add to custom items as override
+        const newItem = { ...item, id: item.id || item.sku, isEdited: true };
+        setCustomItems(prev => [...prev, newItem]);
+        // Add original SKU to deleted list so we don't show duplicate
+        if (editItem.sku && !editItem.isCustom && !editItem.isEdited) {
+          setDeletedItems(prev => [...prev, editItem.sku]);
+        }
+      }
     } else {
-      setCustomItems(prev => [...prev, item]);
+      // New item
+      setCustomItems(prev => [...prev, { ...item, isCustom: true }]);
     }
     setEditItem(null);
   };
@@ -1843,7 +2074,13 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
 
   const handleDeleteItem = () => {
     if (deleteItem) {
-      setCustomItems(prev => prev.filter(i => i.id !== deleteItem.id));
+      if (deleteItem.isCustom || deleteItem.isEdited) {
+        // Remove from custom items
+        setCustomItems(prev => prev.filter(i => i.id !== deleteItem.id));
+      } else {
+        // Add catalog item SKU to deleted list
+        setDeletedItems(prev => [...prev, deleteItem.sku]);
+      }
       setDeleteItem(null);
     }
   };
@@ -1938,7 +2175,7 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
                             <span className="text-sm text-slate-500 dark:text-slate-400">SKU: <span className="font-mono text-slate-700 dark:text-slate-300">{item.sku}</span></span>
                             <span className="text-xs bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">{item.uom}</span>
                             <CopyButton text={item.sku} label="Copy" />
-                            {item.isCustom && (
+                            {user === 'admin' && (
                               <>
                                 <button
                                   onClick={() => handleEditItem(item)}
@@ -1946,20 +2183,26 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
                                 >
                                   Edit
                                 </button>
-                                {user === 'admin' && (
-                                  <button
-                                    onClick={() => setDeleteItem(item)}
-                                    className="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900 dark:hover:bg-red-800 dark:text-red-300 transition cursor-pointer"
-                                  >
-                                    Delete
-                                  </button>
-                                )}
+                                <button
+                                  onClick={() => setDeleteItem(item)}
+                                  className="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900 dark:hover:bg-red-800 dark:text-red-300 transition cursor-pointer"
+                                >
+                                  Delete
+                                </button>
                               </>
                             )}
                           </div>
                         </div>
                         <div className="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg p-2 flex-shrink-0">
-                          <Barcode value={item.sku} height={40} />
+                          {item.barcodeType === 'GS1 2D' || item.barcodeType === 'GS1 QR' ? (
+                            <DataMatrixBarcode value={item.gs1String || item.sku} size={80} gs1Data={item.gs1String} />
+                          ) : item.barcodeType === 'Code 128' || item.barcodeType === 'GS1-128' ? (
+                            <Code128Barcode value={item.gs1String || item.sku} height={40} />
+                          ) : item.barcodeType === 'QR' ? (
+                            <DataMatrixBarcode value={item.sku} size={80} />
+                          ) : (
+                            <Barcode value={item.sku} height={40} />
+                          )}
                         </div>
                       </div>
                     ))}
@@ -2220,10 +2463,12 @@ const GS1View = ({ onBack }) => {
                           )}
                         </div>
                         <div className="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg p-3">
-                          {item.barcodeType === 'GS1 2D' ? (
+                          {item.barcodeType === 'GS1 2D' || item.barcodeType === 'GS1 QR' ? (
                             <DataMatrixBarcode value={item.gtin || item.sku} gs1Data={item.gs1String} size={120} />
-                          ) : item.barcodeType === 'Code 128' ? (
-                            <Code128Barcode value={item.barcode || item.sku} height={60} />
+                          ) : item.barcodeType === 'Code 128' || item.barcodeType === 'GS1-128' ? (
+                            <Code128Barcode value={item.gs1String || item.barcode || item.sku} height={60} />
+                          ) : item.barcodeType === 'QR' ? (
+                            <DataMatrixBarcode value={item.barcode || item.sku} size={120} />
                           ) : (
                             <Barcode value={item.barcode || item.sku} height={50} />
                           )}
