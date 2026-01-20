@@ -1642,7 +1642,7 @@ const Dashboard = ({ user, onSelectCategory, onLogout }) => {
 const TestCard = ({ test, onSelect, isSelected }) => (
   <div onClick={() => onSelect(test.id)} className={`p-4 rounded-lg cursor-pointer transition ${isSelected ? 'bg-red-50 dark:bg-red-900/30 border-2 border-red-500' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-red-300 dark:hover:border-red-600'}`}>
     <div className="flex items-start justify-between mb-2">
-      <span className="text-xs font-bold text-slate-400 dark:text-slate-500">TEST {test.id}</span>
+      <span className="text-xs font-bold text-slate-400 dark:text-slate-500">SCENARIO {test.id}</span>
       <span className={`text-xs px-2 py-1 rounded-full ${typeColors[test.type] || 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>{test.type}</span>
     </div>
     <h4 className="font-semibold text-slate-800 dark:text-white">{test.name}</h4>
@@ -1705,7 +1705,7 @@ const ScanBookView = ({ category, onBack }) => {
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
                 <div className={`bg-gradient-to-r ${headerGradient} text-white p-6`}>
                   <div className="flex items-center gap-3 mb-2 flex-wrap">
-                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">TEST {currentTest.id}</span>
+                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">SCENARIO {currentTest.id}</span>
                     <span className="bg-white/20 px-3 py-1 rounded-full text-sm">{currentTest.type}</span>
                   </div>
                   <h2 className="text-2xl font-bold">{currentTest.name}</h2>
@@ -1719,7 +1719,7 @@ const ScanBookView = ({ category, onBack }) => {
                     </div>
                   </div>
                   <div className="mb-6">
-                    <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">Test Steps</h3>
+                    <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">Scenario Steps</h3>
                     <p className="text-slate-600 dark:text-slate-300 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">{currentTest.steps}</p>
                   </div>
                   {currentTest.notes && (
@@ -1730,7 +1730,7 @@ const ScanBookView = ({ category, onBack }) => {
                       </div>
                     </div>
                   )}
-                  <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">Test Items</h3>
+                  <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">Scenario Items</h3>
                   <div className="space-y-3">
                     {currentTest.items.map((item, i) => (
                       <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 gap-4">
