@@ -2120,6 +2120,282 @@ const ImportModal = ({ isOpen, onClose, onImport, existingItems = [] }) => {
   );
 };
 
+// Add to Collection Modal Component
+const AddToCollectionModal = ({ isOpen, onClose, item, collections, onAddToCollection, onCreateCollection }) => {
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [showNewForm, setShowNewForm] = useState(false);
+
+  if (!isOpen || !item) return null;
+
+  const handleCreate = () => {
+    if (newCollectionName.trim()) {
+      const newId = onCreateCollection(newCollectionName.trim());
+      onAddToCollection(newId, item.sku);
+      setNewCollectionName('');
+      setShowNewForm(false);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white">Add to Collection</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer text-xl">x</button>
+        </div>
+        <div className="p-4">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            Adding: <span className="font-medium text-slate-800 dark:text-white">{item.name}</span>
+          </p>
+          
+          {collections.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Collection:</p>
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                {collections.map(col => {
+                  const isInCollection = col.items.includes(item.sku);
+                  return (
+                    <button
+                      key={col.id}
+                      onClick={() => {
+                        if (!isInCollection) {
+                          onAddToCollection(col.id, item.sku);
+                          onClose();
+                        }
+                      }}
+                      disabled={isInCollection}
+                      className={`w-full px-3 py-2 text-left text-sm rounded-lg flex items-center justify-between transition cursor-pointer ${
+                        isInCollection 
+                          ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                          : 'bg-slate-50 dark:bg-slate-700 hover:bg-purple-50 dark:hover:bg-purple-900/30 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <span>{col.name}</span>
+                      {isInCollection ? (
+                        <span className="text-green-600 dark:text-green-400">Added</span>
+                      ) : (
+                        <span className="text-slate-400">({col.items.length} items)</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {showNewForm ? (
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">New Collection Name:</p>
+              <input
+                type="text"
+                value={newCollectionName}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white mb-3"
+                placeholder="e.g., NRF 2026 Trade Show"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowNewForm(false)}
+                  className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreate}
+                  disabled={!newCollectionName.trim()}
+                  className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 text-white rounded-lg transition cursor-pointer"
+                >
+                  Create & Add
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowNewForm(true)}
+              className="w-full px-3 py-2 border-2 border-dashed border-slate-300 dark:border-slate-600 text-purple-600 dark:text-purple-400 rounded-lg hover:border-purple-400 dark:hover:border-purple-500 transition cursor-pointer"
+            >
+              + Create New Collection
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Manage Collections Modal Component
+const ManageCollectionsModal = ({ isOpen, onClose, collections, onRename, onDelete, onExport, onImportCollection }) => {
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [showImport, setShowImport] = useState(false);
+  const [importData, setImportData] = useState('');
+  const [importError, setImportError] = useState('');
+
+  if (!isOpen) return null;
+
+  const handleStartEdit = (col) => {
+    setEditingId(col.id);
+    setEditName(col.name);
+  };
+
+  const handleSaveEdit = () => {
+    if (editName.trim() && editingId) {
+      onRename(editingId, editName.trim());
+      setEditingId(null);
+      setEditName('');
+    }
+  };
+
+  const handleImport = () => {
+    try {
+      setImportError('');
+      const data = JSON.parse(importData);
+      if (!data.name || !data.items || !Array.isArray(data.items)) {
+        throw new Error('Invalid collection format');
+      }
+      onImportCollection(data);
+      setImportData('');
+      setShowImport(false);
+    } catch (e) {
+      setImportError('Invalid JSON format. Please paste a valid collection export.');
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImportData(event.target.result);
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white">Manage Collections</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer text-xl">x</button>
+        </div>
+        <div className="p-4 max-h-[60vh] overflow-y-auto">
+          {collections.length === 0 ? (
+            <p className="text-center text-slate-500 dark:text-slate-400 py-8">No collections yet. Create one from the Collections dropdown.</p>
+          ) : (
+            <div className="space-y-2">
+              {collections.map(col => (
+                <div key={col.id} className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                  {editingId === col.id ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
+                        className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-600 text-slate-900 dark:text-white text-sm"
+                        autoFocus
+                      />
+                      <button onClick={handleSaveEdit} className="px-2 py-1 bg-green-600 text-white rounded text-sm cursor-pointer">Save</button>
+                      <button onClick={() => setEditingId(null)} className="px-2 py-1 bg-slate-300 dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded text-sm cursor-pointer">Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-800 dark:text-white">{col.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{col.items.length} items - Created {col.created}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => onExport(col.id)}
+                          className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800 dark:text-blue-300 rounded cursor-pointer"
+                          title="Export collection"
+                        >
+                          Export
+                        </button>
+                        <button
+                          onClick={() => handleStartEdit(col)}
+                          className="px-2 py-1 text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-600 dark:hover:bg-slate-500 dark:text-slate-300 rounded cursor-pointer"
+                        >
+                          Rename
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete "${col.name}"? This cannot be undone.`)) {
+                              onDelete(col.id);
+                            }
+                          }}
+                          className="px-2 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900 dark:hover:bg-red-800 dark:text-red-300 rounded cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Import Section */}
+          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+            {showImport ? (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Import Collection</p>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  className="w-full text-sm text-slate-500 dark:text-slate-400"
+                />
+                <textarea
+                  value={importData}
+                  onChange={(e) => setImportData(e.target.value)}
+                  placeholder="Or paste collection JSON here..."
+                  className="w-full h-24 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-mono"
+                />
+                {importError && <p className="text-red-600 dark:text-red-400 text-sm">{importError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setShowImport(false); setImportData(''); setImportError(''); }}
+                    className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleImport}
+                    disabled={!importData.trim()}
+                    className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 text-white rounded-lg cursor-pointer"
+                  >
+                    Import
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowImport(true)}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                Import Collection from File
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex justify-end p-4 border-t border-slate-200 dark:border-slate-700">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg cursor-pointer"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Login Component
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
@@ -2377,6 +2653,9 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [printItems, setPrintItems] = useState([]);
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [showManageCollections, setShowManageCollections] = useState(false);
+  const [addToCollectionItem, setAddToCollectionItem] = useState(null);
   
   // Custom items from localStorage (includes new items AND edited catalog items)
   const [customItems, setCustomItems] = useState(() => {
@@ -2396,6 +2675,18 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Collections from localStorage
+  const [collections, setCollections] = useState(() => {
+    const saved = localStorage.getItem('elera_collections');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Active collection filter
+  const [activeCollection, setActiveCollection] = useState(() => {
+    const saved = localStorage.getItem('elera_activeCollection');
+    return saved || null;
+  });
+
   // Save custom items to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('elera_customItems', JSON.stringify(customItems));
@@ -2410,6 +2701,124 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
   useEffect(() => {
     localStorage.setItem('elera_favorites', JSON.stringify(favorites));
   }, [favorites]);
+
+  // Save collections to localStorage
+  useEffect(() => {
+    localStorage.setItem('elera_collections', JSON.stringify(collections));
+  }, [collections]);
+
+  // Save active collection to localStorage
+  useEffect(() => {
+    if (activeCollection) {
+      localStorage.setItem('elera_activeCollection', activeCollection);
+    } else {
+      localStorage.removeItem('elera_activeCollection');
+    }
+  }, [activeCollection]);
+
+  // Collection functions
+  const createCollection = (name) => {
+    const newCollection = {
+      id: Date.now().toString(),
+      name,
+      created: new Date().toISOString().split('T')[0],
+      items: []
+    };
+    setCollections(prev => [...prev, newCollection]);
+    return newCollection.id;
+  };
+
+  const deleteCollection = (collectionId) => {
+    setCollections(prev => prev.filter(c => c.id !== collectionId));
+    if (activeCollection === collectionId) {
+      setActiveCollection(null);
+    }
+  };
+
+  const renameCollection = (collectionId, newName) => {
+    setCollections(prev => prev.map(c => 
+      c.id === collectionId ? { ...c, name: newName } : c
+    ));
+  };
+
+  const addToCollection = (collectionId, sku) => {
+    setCollections(prev => prev.map(c => {
+      if (c.id === collectionId && !c.items.includes(sku)) {
+        return { ...c, items: [...c.items, sku] };
+      }
+      return c;
+    }));
+  };
+
+  const removeFromCollection = (collectionId, sku) => {
+    setCollections(prev => prev.map(c => {
+      if (c.id === collectionId) {
+        return { ...c, items: c.items.filter(s => s !== sku) };
+      }
+      return c;
+    }));
+  };
+
+  const exportCollection = (collectionId) => {
+    const collection = collections.find(c => c.id === collectionId);
+    if (!collection) return;
+    
+    const allItems = mergedGroups.flatMap(g => g.items);
+    const collectionItems = allItems.filter(item => collection.items.includes(item.sku));
+    
+    const exportData = {
+      name: collection.name,
+      created: collection.created,
+      exported: new Date().toISOString(),
+      items: collectionItems.map(item => ({
+        name: item.name,
+        sku: item.sku,
+        uom: item.uom,
+        department: item.department,
+        barcodeType: item.barcodeType || '1D'
+      }))
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${collection.name.replace(/[^a-z0-9]/gi, '_')}_collection.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const getActiveCollectionItems = () => {
+    if (!activeCollection) return null;
+    const collection = collections.find(c => c.id === activeCollection);
+    return collection ? collection.items : null;
+  };
+
+  // Import a collection from JSON
+  const importCollection = (data) => {
+    const newCollection = {
+      id: Date.now().toString(),
+      name: data.name + ' (imported)',
+      created: new Date().toISOString().split('T')[0],
+      items: []
+    };
+    
+    // If the import includes full item data, add them as custom items
+    if (data.items && data.items.length > 0 && data.items[0].name) {
+      const newItems = data.items.map(item => ({
+        ...item,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        isCustom: true
+      }));
+      setCustomItems(prev => [...prev, ...newItems]);
+      newCollection.items = newItems.map(i => i.sku);
+    } else if (data.items) {
+      // Just SKU list
+      newCollection.items = data.items;
+    }
+    
+    setCollections(prev => [...prev, newCollection]);
+  };
 
   // Toggle favorite
   const toggleFavorite = (sku) => {
@@ -2466,18 +2875,23 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
     return group;
   });
 
+  // Get active collection items for filtering
+  const activeCollectionItems = getActiveCollectionItems();
+
   const filteredGroups = mergedGroups.map(group => ({
     ...group,
     items: group.items.filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.sku.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesFavorites = !showFavoritesOnly || favorites.includes(item.sku);
-      return matchesSearch && matchesFavorites;
+      const matchesCollection = !activeCollectionItems || activeCollectionItems.includes(item.sku);
+      return matchesSearch && matchesFavorites && matchesCollection;
     })
   })).filter(group => group.items.length > 0);
 
   const totalFiltered = filteredGroups.reduce((sum, g) => sum + g.items.length, 0);
   const totalFavorites = favorites.length;
+  const activeCollectionData = collections.find(c => c.id === activeCollection);
 
   // Flatten all items for duplicate checking
   const allExistingItems = mergedGroups.flatMap(group => group.items);
@@ -2558,20 +2972,77 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
       {/* Action Bar */}
       <div className="bg-gradient-to-r from-red-600 to-red-700 shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="text-white flex items-center gap-4">
-            <span className="font-medium">Manage Your Items</span>
+          <div className="text-white flex items-center gap-3 flex-wrap">
+            {/* Collections Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowCollectionModal(!showCollectionModal)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer flex items-center gap-1 ${activeCollection ? 'bg-purple-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}
+              >
+                <span>📁</span>
+                {activeCollectionData ? activeCollectionData.name : 'Collections'}
+                <span className="ml-1">▼</span>
+              </button>
+              {showCollectionModal && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-50 border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  <div className="p-2 border-b border-slate-200 dark:border-slate-700">
+                    <button
+                      onClick={() => {
+                        const name = prompt('Enter collection name:');
+                        if (name?.trim()) {
+                          createCollection(name.trim());
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>+</span> Create New Collection
+                    </button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    <button
+                      onClick={() => { setActiveCollection(null); setShowCollectionModal(false); }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-between cursor-pointer ${!activeCollection ? 'bg-slate-100 dark:bg-slate-700' : ''}`}
+                    >
+                      <span className="text-slate-700 dark:text-slate-300">All Items</span>
+                      {!activeCollection && <span className="text-green-500">✓</span>}
+                    </button>
+                    {collections.map(col => (
+                      <button
+                        key={col.id}
+                        onClick={() => { setActiveCollection(col.id); setShowCollectionModal(false); }}
+                        className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-between cursor-pointer ${activeCollection === col.id ? 'bg-purple-50 dark:bg-purple-900/30' : ''}`}
+                      >
+                        <span className="text-slate-700 dark:text-slate-300 truncate">{col.name}</span>
+                        <span className="text-slate-400 text-xs ml-2">({col.items.length})</span>
+                      </button>
+                    ))}
+                  </div>
+                  {collections.length > 0 && (
+                    <div className="p-2 border-t border-slate-200 dark:border-slate-700">
+                      <button
+                        onClick={() => { setShowManageCollections(true); setShowCollectionModal(false); }}
+                        className="w-full px-3 py-2 text-left text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded cursor-pointer"
+                      >
+                        Manage Collections...
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer flex items-center gap-1 ${showFavoritesOnly ? 'bg-yellow-400 text-yellow-900' : 'bg-white/20 text-white hover:bg-white/30'}`}
             >
-              ⭐ Favorites {totalFavorites > 0 && `(${totalFavorites})`}
+              Favorites {totalFavorites > 0 && `(${totalFavorites})`}
             </button>
             {printItems.length > 0 && (
               <button
                 onClick={() => setShowPrintModal(true)}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-500 text-white hover:bg-green-600 transition cursor-pointer flex items-center gap-1"
               >
-                🖨️ Print Queue ({printItems.length})
+                Print Queue ({printItems.length})
               </button>
             )}
           </div>
@@ -2580,7 +3051,7 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
               onClick={() => setShowImportModal(true)}
               className="px-4 py-2.5 bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg transition cursor-pointer flex items-center gap-2"
             >
-              📥 Import
+              Import
             </button>
             <button
               onClick={() => { setEditItem(null); setShowAddModal(true); }}
@@ -2635,17 +3106,28 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
                             {item.isCustom && (
                               <span className="text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded">Custom</span>
                             )}
+                            {/* Show collection badges */}
+                            {collections.filter(c => c.items.includes(item.sku)).slice(0, 2).map(c => (
+                              <span key={c.id} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded">{c.name}</span>
+                            ))}
                           </div>
                           <div className="flex flex-wrap items-center gap-2 mt-1">
                             <span className="text-sm text-slate-500 dark:text-slate-400">SKU: <span className="font-mono text-slate-700 dark:text-slate-300">{item.sku}</span></span>
                             <span className="text-xs bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">{item.uom}</span>
                             <CopyButton text={item.sku} label="Copy" />
                             <button
+                              onClick={() => setAddToCollectionItem(item)}
+                              className="text-xs px-2 py-1 rounded bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-900 dark:hover:bg-purple-800 dark:text-purple-300 transition cursor-pointer"
+                              title="Add to collection"
+                            >
+                              📁 Collection
+                            </button>
+                            <button
                               onClick={() => addToPrint(item)}
                               className="text-xs px-2 py-1 rounded bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900 dark:hover:bg-green-800 dark:text-green-300 transition cursor-pointer"
                               title="Add to print queue"
                             >
-                              🖨️ Print
+                              Print
                             </button>
                             {user === 'admin' && (
                               <>
@@ -2727,6 +3209,27 @@ const ItemsView = ({ onBack, initialSearch = '', user = '' }) => {
         onImport={(items) => {
           setCustomItems(prev => [...prev, ...items.map(item => ({ ...item, isCustom: true }))]);
         }}
+      />
+
+      {/* Add to Collection Modal */}
+      <AddToCollectionModal
+        isOpen={!!addToCollectionItem}
+        onClose={() => setAddToCollectionItem(null)}
+        item={addToCollectionItem}
+        collections={collections}
+        onAddToCollection={addToCollection}
+        onCreateCollection={createCollection}
+      />
+
+      {/* Manage Collections Modal */}
+      <ManageCollectionsModal
+        isOpen={showManageCollections}
+        onClose={() => setShowManageCollections(false)}
+        collections={collections}
+        onRename={renameCollection}
+        onDelete={deleteCollection}
+        onExport={exportCollection}
+        onImportCollection={importCollection}
       />
 
       {/* Floating Action Button for Mobile */}
