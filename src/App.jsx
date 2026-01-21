@@ -2164,13 +2164,6 @@ const Login = ({ onLogin }) => {
           <button type="button" onClick={handleLogin} className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition duration-200 cursor-pointer">Sign In</button>
         </div>
         <p className="mt-6 text-center text-xs text-slate-400">Version 2.1 • United States Edition 2026</p>
-        <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center font-medium mb-2">Demo Accounts:</p>
-          <div className="text-xs text-slate-400 dark:text-slate-500 space-y-1">
-            <p><span className="font-mono">admin / elera2025</span> — Full access</p>
-            <p><span className="font-mono">guest / guest</span> — Read-only access</p>
-          </div>
-        </div>
       </div>
     </div>
   );
